@@ -278,20 +278,19 @@ impl<RC> Ppmd7<RC> {
         }
     }
 
+    /// We use the first u16 field of the 12-bytes as record type stamp.
+    /// State   { symbol: u8, freq: u8, .. : freq != 0
+    /// Context { num_stats: u16, ..       : num_stats != 0
+    /// Node    { stamp: u16               : stamp == 0 for free record
+    ///                                    : stamp == 1 for head record and guard
+    /// Last 12-bytes record in array is always containing the 12-bytes order-0 Context
+    /// record.
     unsafe fn glue_free_blocks(&mut self) {
         unsafe {
-            // We use the first u16 field of the 12-bytes as record type stamp.
-            // State   { symbol: u8, freq: u8, .. : freq != 0
-            // Context { num_stats: u16, ..       : num_stats != 0
-            // Node    { stamp: u16               : stamp == 0 for free record
-            //                                    : stamp == 1 for head record and guard
-            // Last 12-bytes record in array is always containing the 12-bytes order-0 Context
-            // record.
-
             let mut n = 0;
             self.glue_count = 255;
 
-            // We set guard node at LoUnit.
+            // We set guard node at lo_unit.
             if self.lo_unit != self.hi_unit {
                 self.lo_unit.cast::<Node>().as_mut().stamp = 1;
             }
@@ -773,8 +772,11 @@ impl<RC> Ppmd7<RC> {
                             };
 
                             let old_ptr = self.get_multi_state_stats(c).cast();
-                            Self::mem_12_copy(ptr, old_ptr, old_nu);
-
+                            std::ptr::copy(
+                                old_ptr.cast().as_ptr(),
+                                ptr.as_ptr(),
+                                old_nu as usize * UNIT_SIZE as usize,
+                            );
                             self.insert_node(old_ptr, i);
                             c.as_mut().data.multi_state.stats = self.offset_for_ptr(ptr);
                         }
@@ -839,20 +841,6 @@ impl<RC> Ppmd7<RC> {
             let tmp = *s.offset(0).as_ref();
             *s.offset(0).as_mut() = *s.offset(-1).as_ref();
             *s.offset(-1).as_mut() = tmp;
-        }
-    }
-
-    unsafe fn mem_12_copy(ptr: NonNull<u8>, old_ptr: NonNull<u8>, old_nu: u32) {
-        unsafe {
-            let mut d = ptr.cast::<u32>();
-            let mut z = old_ptr.cast::<u32>();
-            for _ in 0..old_nu {
-                *d.offset(0).as_mut() = *z.offset(0).as_ref();
-                *d.offset(1).as_mut() = *z.offset(1).as_ref();
-                *d.offset(2).as_mut() = *z.offset(2).as_ref();
-                z = z.offset(3);
-                d = d.offset(3);
-            }
         }
     }
 
@@ -952,7 +940,11 @@ impl<RC> Ppmd7<RC> {
                             let ptr = self.remove_node(i1);
                             self.min_context.as_mut().data.multi_state.stats =
                                 self.offset_for_ptr(ptr);
-                            Self::mem_12_copy(ptr, stats.cast(), n1);
+                            std::ptr::copy(
+                                stats.cast().as_ptr(),
+                                ptr.as_ptr(),
+                                n1 as usize * UNIT_SIZE as usize,
+                            );
                             self.insert_node(stats.cast(), i0);
                         } else {
                             self.split_block(stats.cast(), i0, i1);
