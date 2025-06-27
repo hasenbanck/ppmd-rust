@@ -40,6 +40,20 @@ struct See {
     count: u8,
 }
 
+impl See {
+    pub(crate) fn update(&mut self) {
+        if (self.shift as i32) < 7 && {
+            self.count = self.count.wrapping_sub(1);
+            self.count as i32 == 0
+        } {
+            self.summ = ((self.summ as i32) << 1) as u16;
+            let fresh0 = self.shift;
+            self.shift = self.shift.wrapping_add(1);
+            self.count = (3 << fresh0 as i32) as u8;
+        }
+    }
+}
+
 enum SeeSource {
     Dummy,
     Table(usize, usize),
@@ -1326,6 +1340,19 @@ impl<RC> Ppmd8<RC> {
                 self.rescale();
             }
             self.update_model();
+        }
+    }
+
+    unsafe fn update_bin(&mut self, mut s: NonNull<State>) -> u8 {
+        unsafe {
+            let freq = s.as_ref().freq as u32;
+            let sym = s.as_ref().symbol;
+            self.found_state = s;
+            self.prev_success = 1;
+            self.run_length += 1;
+            s.as_mut().freq = freq.wrapping_add((freq < 196) as u32) as u8;
+            self.next_context();
+            sym
         }
     }
 

@@ -1,6 +1,12 @@
 use std::io::{Read, Write};
 
-use crate::Error;
+use crate::{
+    Error,
+    internal::{
+        PPMD_BIN_SCALE,
+        ppmd8::{K_BOT_VALUE, K_TOP_VALUE},
+    },
+};
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -37,10 +43,23 @@ impl<R: Read> RangeDecoder<R> {
     }
 
     #[inline(always)]
+    pub(crate) fn get_threshold(&mut self, sum: u32) -> u32 {
+        self.range /= sum;
+        self.code / self.range
+    }
+
+    #[inline(always)]
     pub(crate) fn read_byte(&mut self) -> Result<u32, std::io::Error> {
         let mut buffer = [0];
         self.reader.read_exact(&mut buffer)?;
         Ok(buffer[0] as u32)
+    }
+
+    #[inline(always)]
+    pub(crate) fn decode_bit_1(&mut self, size: u32) {
+        self.low += size;
+        self.code -= size;
+        self.range = (self.range & !(PPMD_BIN_SCALE - 1)) - size;
     }
 
     #[inline(always)]
@@ -49,6 +68,28 @@ impl<R: Read> RangeDecoder<R> {
         self.low += start;
         self.code -= start;
         self.range *= size;
+    }
+
+    #[inline(always)]
+    pub(crate) fn decode_final(&mut self, start: u32, size: u32) -> Result<(), std::io::Error> {
+        self.decode(start, size);
+        self.normalize_remote()
+    }
+
+    #[inline(always)]
+    pub(crate) fn normalize_remote(&mut self) -> Result<(), std::io::Error> {
+        while self.low ^ self.low.wrapping_add(self.range) < K_TOP_VALUE
+            || self.range < K_BOT_VALUE && {
+                self.range = 0u32.wrapping_sub(self.low) & (K_BOT_VALUE - 1);
+                1 != 0
+            }
+        {
+            self.code = self.code << 8 | self.read_byte()?;
+            self.range <<= 8;
+            self.low <<= 8;
+        }
+
+        Ok(())
     }
 }
 
