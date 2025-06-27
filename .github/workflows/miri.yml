@@ -1,0 +1,26 @@
+name: Miri
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  miri:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rust version
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+          components: miri, rust-std
+      - name: Miri PPMd7
+        run: |
+          cd ppmd-rust
+          cargo +nightly miri test --lib encoder_7::test::ppmd7encoder_encode_decode
+      - name: Miri PPMd8
+        run: |
+          cd ppmd-rust
+          cargo +nightly miri test --lib encoder_8::test::ppmd8encoder_encode_decode
