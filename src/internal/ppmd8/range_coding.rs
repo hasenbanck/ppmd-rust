@@ -121,10 +121,43 @@ impl<W: Write> RangeEncoder<W> {
     }
 
     #[inline(always)]
+    pub(crate) fn encode_bit_1(&mut self, bound: u32) {
+        self.low += bound;
+        self.range = (self.range & !(PPMD_BIN_SCALE - 1)) - bound;
+    }
+
+    #[inline(always)]
     pub(crate) fn encode(&mut self, start: u32, size: u32, total: u32) {
         self.range /= total;
         self.low += start * self.range;
         self.range *= size;
+    }
+
+    #[inline(always)]
+    pub(crate) fn encode_final(
+        &mut self,
+        start: u32,
+        size: u32,
+        total: u32,
+    ) -> Result<(), std::io::Error> {
+        self.encode(start, size, total);
+        self.normalize_remote()
+    }
+
+    #[inline(always)]
+    pub(crate) fn normalize_remote(&mut self) -> Result<(), std::io::Error> {
+        while self.low ^ self.low.wrapping_add(self.range) < K_TOP_VALUE
+            || self.range < K_BOT_VALUE && {
+                self.range = 0u32.wrapping_sub(self.low) & (K_BOT_VALUE - 1);
+                1 != 0
+            }
+        {
+            self.write_byte((self.low >> 24) as u8)?;
+            self.range <<= 8;
+            self.low <<= 8;
+        }
+
+        Ok(())
     }
 
     pub(crate) fn flush(&mut self) -> Result<(), std::io::Error> {
