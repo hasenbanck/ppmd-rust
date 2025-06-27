@@ -1,9 +1,9 @@
 use std::io::Read;
 
 use crate::{
-    Error, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER, RestoreMethod,
-    SYM_END,
     internal::ppmd8::{Ppmd8, RangeDecoder},
+    Error, RestoreMethod, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER,
+    SYM_END,
 };
 
 /// A decoder to decompress data using PPMd8 (PPMdI rev.1).

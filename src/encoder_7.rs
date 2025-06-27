@@ -1,8 +1,8 @@
 use std::io::Write;
 
 use crate::{
-    Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER,
     internal::ppmd7::{Ppmd7, RangeEncoder},
+    Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER,
 };
 
 /// An encoder to compress data using PPMd7 (PPMdH) with the 7z range coder.

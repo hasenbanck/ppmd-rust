@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use super::{Ppmd7, RangeEncoder};
-use crate::internal::{PPMD_INT_BITS, ppmd_update_prob_1};
+use crate::internal::{ppmd_update_prob_1, PPMD_INT_BITS};
 
 impl<W: Write> Ppmd7<RangeEncoder<W>> {
     pub(crate) fn encode_symbol(&mut self, symbol: u8) -> Result<(), std::io::Error> {

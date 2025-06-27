@@ -1,8 +1,8 @@
 use std::io::Write;
 
 use crate::{
-    Error, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER, RestoreMethod,
     internal::ppmd8::{Ppmd8, RangeEncoder},
+    Error, RestoreMethod, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER,
 };
 
 /// A encoder to compress data using PPMd8 (PPMdI rev.1).

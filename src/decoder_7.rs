@@ -1,8 +1,8 @@
 use std::io::Read;
 
 use crate::{
-    Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
     internal::ppmd7::{Ppmd7, RangeDecoder},
+    Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
 
 /// A decoder to decompress data using PPMd7 (PPMdH) with the 7z range coder.

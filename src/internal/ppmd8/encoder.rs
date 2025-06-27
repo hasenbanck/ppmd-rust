@@ -1,5 +1,5 @@
 use super::*;
-use crate::internal::{PPMD_INT_BITS, ppmd_update_prob_1};
+use crate::internal::{ppmd_update_prob_1, PPMD_INT_BITS};
 
 impl<W: Write> Ppmd8<RangeEncoder<W>> {
     pub(crate) fn encode_symbol(&mut self, symbol: u8) -> Result<(), std::io::Error> {

@@ -1,11 +1,11 @@
 use std::io::{Read, Write};
 
 use crate::{
-    Error,
     internal::{
-        PPMD_BIN_SCALE,
         ppmd8::{K_BOT_VALUE, K_TOP_VALUE},
+        PPMD_BIN_SCALE,
     },
+    Error,
 };
 
 #[derive(Copy, Clone)]
@@ -177,5 +177,9 @@ impl<W: Write> RangeEncoder<W> {
 // We correct (escape_freq) and (sum), if (sum) is larger than (range).
 #[inline(always)]
 fn correct_sum_range(range: u32, sum: u32) -> u32 {
-    if sum > range { range } else { sum }
+    if sum > range {
+        range
+    } else {
+        sum
+    }
 }
