@@ -3,16 +3,16 @@ mod encoder;
 mod range_coding;
 
 use std::{
-    alloc::{Layout, alloc_zeroed, dealloc},
+    alloc::{alloc_zeroed, dealloc, Layout},
     io::{Read, Write},
-    mem::{ManuallyDrop, swap},
-    ptr::{NonNull, addr_of_mut},
+    mem::{swap, ManuallyDrop},
+    ptr::{addr_of_mut, NonNull},
 };
 
 pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
 
 use super::{PPMD_BIN_SCALE, PPMD_NUM_INDEXES, PPMD_PERIOD_BITS};
-use crate::{Error, PPMD8_MAX_ORDER, RestoreMethod};
+use crate::{Error, RestoreMethod, PPMD8_MAX_ORDER};
 
 // Some compile time tests to make sure assumptions of the algorithm are met.
 const _: () = assert!(size_of::<Node>() == UNIT_SIZE as usize);
@@ -683,7 +683,7 @@ impl<RC> Ppmd8<RC> {
                     nu as usize * UNIT_SIZE as usize,
                 );
 
-                if stats.addr() != self.units_start.addr() {
+                if stats.cast() != self.units_start {
                     self.insert_node(stats.cast(), index);
                 } else {
                     self.units_start = self.units_start.offset(
@@ -697,7 +697,7 @@ impl<RC> Ppmd8<RC> {
 
             while s >= stats {
                 let successor = s.as_ref().successor;
-                if self.ptr_of_offset(successor).addr() < self.units_start.addr() {
+                if self.ptr_of_offset(successor) < self.units_start {
                     let fresh = ns;
                     ns -= 1;
                     let mut s2 = stats.offset(fresh as isize);
@@ -1113,7 +1113,7 @@ impl<RC> Ppmd8<RC> {
                     return;
                 };
                 min_successor = self.offset_for_ptr(cs.cast());
-            } else if self.ptr_of_offset(min_successor).addr() < self.units_start.addr() {
+            } else if self.ptr_of_offset(min_successor) < self.units_start {
                 let Some(cs) = self.create_successors(0, &mut s, self.min_context) else {
                     self.restore_model(c);
                     return;
@@ -1365,7 +1365,7 @@ impl<RC> Ppmd8<RC> {
     unsafe fn next_context(&mut self) {
         unsafe {
             let c = self.get_context(self.found_state.as_ref().successor);
-            if self.order_fall == 0 && c.addr() >= self.units_start.addr() {
+            if self.order_fall == 0 && c.cast() >= self.units_start {
                 self.min_context = c;
                 self.max_context = self.min_context;
             } else {
@@ -1442,7 +1442,7 @@ impl<RC> Ppmd8<RC> {
     unsafe fn mask_symbols(char_mask: &mut [u8; 256], s: NonNull<State>, mut s2: NonNull<State>) {
         unsafe {
             char_mask[s.as_ref().symbol as usize] = 0;
-            while s2.addr() < s.addr() {
+            while s2 < s {
                 let sym0 = s2.offset(0).as_ref().symbol as u32;
                 let sym1 = s2.offset(1).as_ref().symbol as u32;
                 s2 = s2.offset(2);

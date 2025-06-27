@@ -2,8 +2,8 @@ use std::io::Read;
 
 use super::{Ppmd7, RangeDecoder};
 use crate::{
+    internal::{ppmd_update_prob_1, PPMD_INT_BITS},
     SYM_END, SYM_ERROR,
-    internal::{PPMD_INT_BITS, ppmd_update_prob_1},
 };
 
 impl<R: Read> Ppmd7<RangeDecoder<R>> {
@@ -169,7 +169,7 @@ impl<R: Read> Ppmd7<RangeDecoder<R>> {
 
                 s = self.get_multi_state_stats(self.min_context);
                 let s2 = s.offset(self.min_context.as_ref().num_stats as i32 as isize);
-                while s.addr() < s2.addr() {
+                while s < s2 {
                     char_mask[s.as_ref().symbol as usize] = 0;
                     s = s.offset(1);
                 }

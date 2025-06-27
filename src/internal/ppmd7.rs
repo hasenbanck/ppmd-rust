@@ -3,10 +3,10 @@ mod encoder;
 mod range_coding;
 
 use std::{
-    alloc::{Layout, alloc_zeroed, dealloc},
+    alloc::{alloc_zeroed, dealloc, Layout},
     io::{Read, Write},
     mem::ManuallyDrop,
-    ptr::{NonNull, addr_of_mut},
+    ptr::{addr_of_mut, NonNull},
 };
 
 pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
@@ -1022,7 +1022,7 @@ impl<RC> Ppmd7<RC> {
     unsafe fn next_context(&mut self) {
         unsafe {
             let c = self.get_context(self.found_state.as_ref().successor);
-            if self.order_fall == 0 && c.addr() > self.text.addr() {
+            if self.order_fall == 0 && c.cast() > self.text {
                 self.min_context = c;
                 self.max_context = self.min_context;
             } else {
@@ -1095,7 +1095,7 @@ impl<RC> Ppmd7<RC> {
     unsafe fn mask_symbols(char_mask: &mut [u8; 256], s: NonNull<State>, mut s2: NonNull<State>) {
         unsafe {
             char_mask[s.as_ref().symbol as usize] = 0;
-            while s2.addr() < s.addr() {
+            while s2 < s {
                 let sym0 = s2.offset(0).as_ref().symbol as u32;
                 let sym1 = s2.offset(1).as_ref().symbol as u32;
                 s2 = s2.offset(2);

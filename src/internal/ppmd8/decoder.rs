@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
+    internal::{ppmd_update_prob_1, PPMD_INT_BITS},
     SYM_END, SYM_ERROR,
-    internal::{PPMD_INT_BITS, ppmd_update_prob_1},
 };
 
 impl<R: Read> Ppmd8<RangeDecoder<R>> {
@@ -166,7 +166,7 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                 let s2 = s
                     .offset(self.min_context.as_ref().num_stats as i32 as isize)
                     .offset(1);
-                while s.addr() < s2.addr() {
+                while s < s2 {
                     char_mask[s.as_ref().symbol as usize] = 0;
                     s = s.offset(1);
                 }
