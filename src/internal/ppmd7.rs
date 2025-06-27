@@ -2,14 +2,14 @@ mod decoder;
 mod encoder;
 mod range_coding;
 
-pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
-use std::ptr::addr_of_mut;
 use std::{
     alloc::{Layout, alloc_zeroed, dealloc},
     io::{Read, Write},
     mem::ManuallyDrop,
-    ptr::NonNull,
+    ptr::{NonNull, addr_of_mut},
 };
+
+pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
 
 use super::{PPMD_BIN_SCALE, PPMD_NUM_INDEXES, PPMD_PERIOD_BITS};
 use crate::Error;

@@ -2,16 +2,17 @@ mod decoder;
 mod encoder;
 mod range_coding;
 
-use super::{PPMD_BIN_SCALE, PPMD_NUM_INDEXES, PPMD_PERIOD_BITS};
-use crate::{Error, RestoreMethod};
-pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
-use std::io::{Read, Write};
-use std::mem::ManuallyDrop;
 use std::{
     alloc::{Layout, alloc_zeroed, dealloc},
-    mem::swap,
+    io::{Read, Write},
+    mem::{ManuallyDrop, swap},
     ptr::{NonNull, addr_of_mut},
 };
+
+pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
+
+use super::{PPMD_BIN_SCALE, PPMD_NUM_INDEXES, PPMD_PERIOD_BITS};
+use crate::{Error, RestoreMethod};
 
 // Some compile time tests to make sure assumptions of the algorithm are met.
 const _: () = assert!(size_of::<Node>() == UNIT_SIZE as usize);
@@ -347,7 +348,6 @@ impl<RC> Ppmd8<RC> {
                     let num_bytes = self.index2units[index as usize] as u32 * UNIT_SIZE as u32;
                     let us = self.units_start;
                     self.glue_count = self.glue_count.wrapping_sub(1);
-                    self.glue_count;
                     return if us.offset_from(self.text) as u32 > num_bytes {
                         self.units_start = us.offset(-(num_bytes as isize));
                         Some(self.units_start)
@@ -396,17 +396,12 @@ impl<RC> Ppmd8<RC> {
                 let ptr = self.remove_node(i1);
                 let mut d = ptr.cast::<u32>();
                 let mut z = old_ptr.cast::<u32>();
-                let mut n = new_nu;
-                loop {
+                for _ in 0..new_nu {
                     *d.offset(0).as_mut() = *z.offset(0).as_ref();
                     *d.offset(1).as_mut() = *z.offset(1).as_ref();
                     *d.offset(2).as_mut() = *z.offset(2).as_ref();
                     z = z.offset(3);
                     d = d.offset(3);
-                    n = n.wrapping_sub(1);
-                    if !(n != 0) {
-                        break;
-                    }
                 }
                 self.insert_node(old_ptr.cast(), i0);
                 return ptr;
@@ -444,14 +439,13 @@ impl<RC> Ppmd8<RC> {
                 node.as_mut().stamp = 0;
                 count[self.units2index[(nu as usize).wrapping_sub(1)] as usize] =
                     count[self.units2index[(nu as usize).wrapping_sub(1)] as usize].wrapping_add(1);
-                count[self.units2index[(nu as usize).wrapping_sub(1)] as usize];
                 node = node.offset(nu as isize);
             }
             self.units_start = node.cast();
             let mut i = 0;
             while i < PPMD_NUM_INDEXES {
                 let mut cnt = count[i as usize];
-                if !(cnt == 0) {
+                if cnt != 0 {
                     let mut prev = self.free_list.as_mut_ptr().offset(i as isize).cast::<u32>();
                     let mut n = *prev;
                     self.stamps[i as usize] = self.stamps[i as usize].wrapping_sub(cnt);
@@ -560,11 +554,11 @@ impl<RC> Ppmd8<RC> {
 
     unsafe fn refresh(&mut self, mut ctx: NonNull<Context>, old_nu: u32, mut scale: u32) {
         unsafe {
-            let mut i = ctx.as_ref().num_stats as u32;
+            let num_stats = ctx.as_ref().num_stats as u32;
 
             let states = self.get_multi_state_stats(ctx);
             let mut s = self
-                .shrink_units(states, old_nu, (i + 2) >> 1)
+                .shrink_units(states, old_nu, (num_stats + 2) >> 1)
                 .cast::<State>();
             ctx.as_mut().data.multi_state.stats = self.offset_for_ptr(s.cast());
             scale |= (ctx.as_ref().data.multi_state.summ_freq as u32 >= 1 << 15) as u32;
@@ -574,7 +568,7 @@ impl<RC> Ppmd8<RC> {
             freq = freq.wrapping_add(scale) >> scale;
             let mut sum_freq = freq;
             s.as_mut().freq = freq as u8;
-            loop {
+            for _ in 0..num_stats {
                 s = s.offset(1);
                 let mut freq = s.as_ref().freq as u32;
                 esc_freq = esc_freq.wrapping_sub(freq);
@@ -582,16 +576,12 @@ impl<RC> Ppmd8<RC> {
                 sum_freq = sum_freq.wrapping_add(freq);
                 s.as_mut().freq = freq as u8;
                 flags |= Self::hi_bits_prepare(s.as_ref().symbol as u32);
-                i = i.wrapping_sub(1);
-                if !(i != 0) {
-                    break;
-                }
             }
             ctx.as_mut().data.multi_state.summ_freq =
                 sum_freq.wrapping_add(esc_freq.wrapping_add(scale) >> scale) as u16;
             ctx.as_mut().flags = (ctx.as_ref().flags as u32
-                & (FLAG_PREV_HIGH as u32 + FLAG_RESCALED as u32 * scale)
-                    + Self::hi_bits_convert_3(flags)) as u8;
+                & ((FLAG_PREV_HIGH as u32 + FLAG_RESCALED as u32 * scale)
+                    + Self::hi_bits_convert_3(flags))) as u8;
         }
     }
 
@@ -635,17 +625,12 @@ impl<RC> Ppmd8<RC> {
                 ctx.as_mut().data.multi_state.stats = self.offset_for_ptr(ptr.cast());
                 let mut d = ptr.cast::<u32>();
                 let mut z = stats.cast::<u32>();
-                let mut n = nu;
-                loop {
+                for _ in 0..nu {
                     *d.offset(0).as_mut() = *z.offset(0).as_ref();
                     *d.offset(1).as_mut() = *z.offset(1).as_ref();
                     *d.offset(2).as_mut() = *z.offset(2).as_ref();
                     z = z.offset(3);
                     d = d.offset(3);
-                    n = n.wrapping_sub(1);
-                    if !(n != 0) {
-                        break;
-                    }
                 }
                 if stats.addr() != self.units_start.addr() {
                     self.insert_node(stats.cast(), index);
@@ -657,7 +642,7 @@ impl<RC> Ppmd8<RC> {
                 stats = ptr.cast();
             }
             let mut s = stats.offset(ns as isize);
-            loop {
+            while s >= stats {
                 let successor = s.as_ref().successor;
                 if self.ptr_of_offset(successor).addr() < self.units_start.addr() {
                     let fresh = ns;
@@ -678,9 +663,6 @@ impl<RC> Ppmd8<RC> {
                     s.as_mut().successor = 0;
                 }
                 s = s.offset(-1);
-                if !(s >= stats) {
-                    break;
-                }
             }
             if ns != ctx.as_ref().num_stats as i32 && order != 0 {
                 if ns < 0 {
@@ -774,12 +756,9 @@ impl<RC> Ppmd8<RC> {
                 while self.max_context.as_ref().suffix != 0 {
                     self.max_context = self.get_context(self.max_context.as_ref().suffix);
                 }
-                loop {
+                while self.get_used_memory() > 3 * (self.size >> 2) {
                     self.cut_off(self.max_context, 0);
                     self.expand_text_area();
-                    if !(self.get_used_memory() > 3 * (self.size >> 2)) {
-                        break;
-                    }
                 }
                 self.glue_count = 0;
                 self.order_fall = self.max_order;
@@ -911,7 +890,7 @@ impl<RC> Ppmd8<RC> {
             let c1 = c;
             let up_branch = self.offset_for_ptr(self.text.cast());
             self.found_state.as_mut().successor = up_branch;
-            self.order_fall = (self.order_fall).wrapping_add(1);
+            self.order_fall += 1;
             loop {
                 if let Some(state) = s1 {
                     c = self.get_context(c.as_ref().suffix);
@@ -946,7 +925,7 @@ impl<RC> Ppmd8<RC> {
                     break;
                 }
                 s.as_mut().successor = up_branch;
-                self.order_fall = (self.order_fall).wrapping_add(1);
+                self.order_fall += 1;
             }
             if s.as_ref().successor <= up_branch {
                 let s2 = self.found_state;
@@ -997,11 +976,8 @@ impl<RC> Ppmd8<RC> {
                     let mut state = self.get_multi_state_stats(c);
 
                     if state.as_ref().symbol != sym {
-                        loop {
+                        while state.as_ref().symbol != sym {
                             state = state.offset(1);
-                            if !(state.as_ref().symbol != sym) {
-                                break;
-                            }
                         }
                         if state.offset(0).as_ref().freq as i32
                             >= state.offset(-1).as_ref().freq as i32
@@ -1086,16 +1062,13 @@ impl<RC> Ppmd8<RC> {
                             let mut d = ptr.cast::<u32>();
                             let mut z = old_ptr.cast::<u32>();
                             let mut n = old_nu;
-                            loop {
+                            for _ in 0..old_nu {
                                 *d.offset(0).as_mut() = *z.offset(0).as_ref();
                                 *d.offset(1).as_mut() = *z.offset(1).as_ref();
                                 *d.offset(2).as_mut() = *z.offset(2).as_ref();
                                 z = z.offset(3);
                                 d = d.offset(3);
                                 n = n.wrapping_sub(1);
-                                if !(n != 0) {
-                                    break;
-                                }
                             }
                             self.insert_node(old_ptr.cast(), i);
                             c.as_mut().data.multi_state.stats = self.offset_for_ptr(ptr);

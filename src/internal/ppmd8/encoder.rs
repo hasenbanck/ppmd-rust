@@ -8,9 +8,8 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
             if self.min_context.as_ref().num_stats != 0 {
                 let mut s = self.get_multi_state_stats(self.min_context);
                 let mut summ_freq = self.min_context.as_ref().data.multi_state.summ_freq as u32;
-                if summ_freq > self.rc.range {
-                    summ_freq = self.rc.range;
-                }
+                summ_freq = self.rc.correct_sum_range(summ_freq);
+
                 if s.as_ref().symbol == symbol {
                     self.rc.encode(0, s.as_ref().freq as u32, summ_freq);
                     while self.rc.low ^ self.rc.low.wrapping_add(self.rc.range) < K_TOP_VALUE
@@ -29,8 +28,8 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                 }
                 self.prev_success = 0;
                 let mut sum = s.as_ref().freq as u32;
-                let mut i = self.min_context.as_ref().num_stats as u32;
-                loop {
+                let num_stats = self.min_context.as_ref().num_stats as u32;
+                for _ in 0..num_stats {
                     s = s.offset(1);
                     if s.as_ref().symbol == symbol {
                         self.rc.encode(sum, s.as_ref().freq as u32, summ_freq);
@@ -49,10 +48,6 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                         return Ok(());
                     }
                     sum = sum.wrapping_add(s.as_ref().freq as u32);
-                    i = i.wrapping_sub(1);
-                    if !(i != 0) {
-                        break;
-                    }
                 }
                 self.rc.encode(sum, summ_freq.wrapping_sub(sum), summ_freq);
 
@@ -120,22 +115,19 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                 }
                 let mut mc = self.min_context;
                 let num_masked = mc.as_ref().num_stats as u32;
-                loop {
+                while mc.as_ref().num_stats as u32 == num_masked {
                     self.order_fall += 1;
                     if mc.as_ref().suffix == 0 {
                         return Ok(());
                     }
                     mc = self.get_context(mc.as_ref().suffix);
-                    if !(mc.as_ref().num_stats as u32 == num_masked) {
-                        break;
-                    }
                 }
                 self.min_context = mc;
                 let see_source = self.make_esc_freq(num_masked, &mut esc_freq);
                 let mut s = self.get_multi_state_stats(self.min_context);
                 let mut sum = 0u32;
                 let mut i = (self.min_context.as_ref().num_stats as u32) + 1;
-                loop {
+                while i != 0 {
                     let cur = s.as_ref().symbol as u32;
                     if cur as i32 == symbol as i32 {
                         let low = sum;
@@ -153,12 +145,12 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                         }
                         self.found_state = s;
                         sum += esc_freq;
-                        let mut num2 = i / 2;
+                        let num2 = i / 2;
                         i &= 1;
                         sum += freq & 0u32.wrapping_sub(i);
                         if num2 != 0 {
                             s = s.offset(i as isize);
-                            loop {
+                            for _ in 0..num2 {
                                 let sym0 = s.offset(0).as_ref().symbol as u32;
                                 let sym1 = s.offset(1).as_ref().symbol as u32;
                                 s = s.offset(2);
@@ -166,15 +158,11 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                                     & char_mask[sym0 as usize] as u32;
                                 sum += s.offset(-1).as_ref().freq as u32
                                     & char_mask[sym1 as usize] as u32;
-                                num2 -= 1;
-                                if !(num2 != 0) {
-                                    break;
-                                }
                             }
                         }
-                        if sum > self.rc.range {
-                            sum = self.rc.range;
-                        }
+
+                        sum = self.rc.correct_sum_range(sum);
+
                         self.rc.encode(low, freq, sum);
                         while self.rc.low ^ self.rc.low.wrapping_add(self.rc.range) < K_TOP_VALUE
                             || self.rc.range < K_BOT_VALUE && {
@@ -193,16 +181,13 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                     sum += s.as_ref().freq as u32 & char_mask[cur as usize] as u32;
                     s = s.offset(1);
                     i = i.wrapping_sub(1);
-                    if !(i != 0) {
-                        break;
-                    }
                 }
                 let mut total = sum.wrapping_add(esc_freq);
                 let see = self.get_see(see_source);
                 see.summ = (see.summ as u32).wrapping_add(total) as u16;
-                if total > self.rc.range {
-                    total = self.rc.range;
-                }
+
+                total = self.rc.correct_sum_range(total);
+
                 self.rc.encode(sum, total.wrapping_sub(sum), total);
 
                 let s2 = self.get_multi_state_stats(self.min_context);

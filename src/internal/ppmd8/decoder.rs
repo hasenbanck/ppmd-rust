@@ -1,6 +1,8 @@
 use super::*;
-use crate::internal::{PPMD_INT_BITS, ppmd_update_prob_1};
-use crate::{SYM_END, SYM_ERROR};
+use crate::{
+    SYM_END, SYM_ERROR,
+    internal::{PPMD_INT_BITS, ppmd_update_prob_1},
+};
 
 impl<R: Read> Ppmd8<RangeDecoder<R>> {
     pub(crate) unsafe fn decode_symbol(&mut self) -> Result<i32, std::io::Error> {
@@ -10,9 +12,8 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                 let mut s = self.get_multi_state_stats(self.min_context);
                 let mut summ_freq = self.min_context.as_ref().data.multi_state.summ_freq as u32;
 
-                if summ_freq > self.rc.range {
-                    summ_freq = self.rc.range;
-                }
+                summ_freq = self.rc.correct_sum_range(summ_freq);
+
                 self.rc.range /= summ_freq;
                 let mut count = self.rc.code / self.rc.range;
                 let mut hi_cnt = count;
@@ -36,8 +37,9 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                     return Ok(sym as i32);
                 }
                 self.prev_success = 0;
-                let mut i = self.min_context.as_ref().num_stats as u32;
-                loop {
+
+                let num_stats = self.min_context.as_ref().num_stats as u32;
+                for _ in 0..num_stats {
                     s = s.offset(1);
                     count = count.wrapping_sub(s.as_ref().freq as u32);
                     if (count as i32) < 0 {
@@ -61,10 +63,6 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                         let sym = s.as_ref().symbol;
                         self.update1();
                         return Ok(sym as i32);
-                    }
-                    i = i.wrapping_sub(1);
-                    if !(i != 0) {
-                        break;
                     }
                 }
                 if hi_cnt >= summ_freq {
@@ -143,26 +141,25 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                 }
                 let mut mc = self.min_context;
                 let num_masked = mc.as_ref().num_stats as u32;
-                loop {
+
+                while mc.as_ref().num_stats as u32 == num_masked {
                     self.order_fall = self.order_fall.wrapping_add(1);
                     if mc.as_ref().suffix == 0 {
                         return Ok(SYM_END);
                     }
                     mc = self.get_context(mc.as_ref().suffix);
-                    if !(mc.as_ref().num_stats as u32 == num_masked) {
-                        break;
-                    }
                 }
+
                 let s = self.get_multi_state_stats(mc);
                 let mut num = (mc.as_ref().num_stats as u32).wrapping_add(1);
-                let mut num2 = num.wrapping_div(2);
+                let num2 = num.wrapping_div(2);
                 num &= 1;
                 let mut hi_cnt = s.as_ref().freq as u32
                     & *char_mask.as_mut_ptr().offset(s.as_ref().symbol as isize) as u32
                     & 0u32.wrapping_sub(num);
                 let mut s = s.offset(num as isize);
                 self.min_context = mc;
-                loop {
+                for _ in 0..num2 {
                     let sym0 = s.offset(0).as_ref().symbol as u32;
                     let sym1 = s.offset(1).as_ref().symbol as u32;
                     s = s.offset(2);
@@ -174,17 +171,11 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                         s.offset(-1).as_ref().freq as u32
                             & *char_mask.as_mut_ptr().offset(sym1 as isize) as u32,
                     );
-                    num2 = num2.wrapping_sub(1);
-                    if !(num2 != 0) {
-                        break;
-                    }
                 }
                 let see_source = self.make_esc_freq(num_masked, &mut freq_sum);
                 freq_sum = freq_sum.wrapping_add(hi_cnt);
-                let mut freq_sum2 = freq_sum;
-                if freq_sum2 > self.rc.range {
-                    freq_sum2 = self.rc.range;
-                }
+                let freq_sum2 = self.rc.correct_sum_range(freq_sum);
+
                 self.rc.range /= freq_sum2;
                 let mut count = self.rc.code / self.rc.range;
                 if count < hi_cnt {
@@ -192,12 +183,10 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                     hi_cnt = count;
                     loop {
                         count = count.wrapping_sub(
-                            s.as_ref().freq as u32
-                                & *(char_mask.as_mut_ptr()).offset(s.as_ref().symbol as isize)
-                                    as u32,
+                            s.as_ref().freq as u32 & char_mask[s.as_ref().symbol as usize] as u32,
                         );
                         s = s.offset(1);
-                        if (count as i32) < 0 as i32 {
+                        if (count as i32) < 0 {
                             break;
                         }
                     }

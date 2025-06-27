@@ -32,6 +32,11 @@ impl<R: Read> RangeDecoder<R> {
     }
 
     #[inline(always)]
+    pub(crate) fn correct_sum_range(&self, sum: u32) -> u32 {
+        correct_sum_range(self.range, sum)
+    }
+
+    #[inline(always)]
     pub(crate) fn read_byte(&mut self) -> Result<u32, std::io::Error> {
         let mut buffer = [0];
         self.reader.read_exact(&mut buffer)?;
@@ -64,6 +69,12 @@ impl<W: Write> RangeEncoder<W> {
         }
     }
 
+    #[inline(always)]
+    pub(crate) fn correct_sum_range(&self, sum: u32) -> u32 {
+        correct_sum_range(self.range, sum)
+    }
+
+    #[inline(always)]
     pub(crate) fn write_byte(&mut self, byte: u8) -> Result<(), std::io::Error> {
         self.writer.write_all(&[byte])
     }
@@ -84,4 +95,13 @@ impl<W: Write> RangeEncoder<W> {
         self.writer.flush()?;
         Ok(())
     }
+}
+
+// The original PPMdI encoder and decoder probably could work incorrectly in some rare cases,
+// where the original PPMdI code can give "Divide by Zero" operation.
+// We use the following fix to allow correct working of encoder and decoder in any cases.
+// We correct (escape_freq) and (sum), if (sum) is larger than (range).
+#[inline(always)]
+fn correct_sum_range(range: u32, sum: u32) -> u32 {
+    if sum > range { range } else { sum }
 }
