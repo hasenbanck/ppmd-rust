@@ -27,21 +27,34 @@ pub use decoder_8::Ppmd8Decoder;
 pub use encoder_7::Ppmd7Encoder;
 pub use encoder_8::Ppmd8Encoder;
 
+/// The minimal order PPMd7 supports.
 pub const PPMD7_MIN_ORDER: u32 = 2;
 
+/// The maximal order PPMd7 supports.
 pub const PPMD7_MAX_ORDER: u32 = 64;
 
+/// The minimal memory that PPMd7 supports.
 pub const PPMD7_MIN_MEM_SIZE: u32 = 2048;
 
+/// The maximal memory that PPMd7 supports.
 pub const PPMD7_MAX_MEM_SIZE: u32 = 4294967259;
 
+/// The minimal order PPMd8 supports.
 pub const PPMD8_MIN_ORDER: u32 = 2;
 
+/// The maximal order PPMd8 supports.
 pub const PPMD8_MAX_ORDER: u32 = 16;
+
+/// The minimal memory that PPMd8 supports.
+pub const PPMD8_MIN_MEM_SIZE: u32 = 2048;
+
+/// The maximal memory that PPMd8 supports.
+pub const PPMD8_MAX_MEM_SIZE: u32 = u32::MAX;
 
 const SYM_END: i32 = -1;
 const SYM_ERROR: i32 = -2;
 
+/// Error type of the crate.
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// The restore method used in PPMd8.

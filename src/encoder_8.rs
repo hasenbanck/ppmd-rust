@@ -1,17 +1,20 @@
 use std::io::Write;
 
 use crate::{
-    Error, PPMD8_MAX_ORDER, PPMD8_MIN_ORDER, RestoreMethod,
+    Error, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER, RestoreMethod,
     internal::ppmd8::{Ppmd8, RangeEncoder},
 };
 
-/// A encoder to encode PPMd8 (PPMdI rev.1) compressed data.
+/// A encoder to compress data using PPMd8 (PPMdI rev.1).
 pub struct Ppmd8Encoder<W: Write> {
     ppmd: Ppmd8<RangeEncoder<W>>,
 }
 
 impl<W: Write> Ppmd8Encoder<W> {
-    /// Creates a new [`Ppmd8Encoder`].
+    /// Creates a new [`Ppmd8Encoder`] which provides a writer over the compressed data.
+    ///
+    /// The given `order` must be between [`PPMD8_MIN_ORDER`] and [`PPMD8_MAX_ORDER`] (inclusive).
+    /// The given `mem_size` must be between [`PPMD8_MIN_MEM_SIZE`] and [`PPMD8_MAX_MEM_SIZE`] (inclusive).
     pub fn new(
         writer: W,
         order: u32,
@@ -19,7 +22,7 @@ impl<W: Write> Ppmd8Encoder<W> {
         restore_method: RestoreMethod,
     ) -> crate::Result<Self> {
         if !(PPMD8_MIN_ORDER..=PPMD8_MAX_ORDER).contains(&order)
-            || restore_method == RestoreMethod::Unsupported
+            || !(PPMD8_MIN_MEM_SIZE..=PPMD8_MAX_MEM_SIZE).contains(&mem_size)
         {
             return Err(Error::InvalidParameter);
         }

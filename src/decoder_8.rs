@@ -1,18 +1,22 @@
 use std::io::Read;
 
 use crate::{
-    Error, PPMD8_MAX_ORDER, PPMD8_MIN_ORDER, RestoreMethod, SYM_END,
+    Error, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER, RestoreMethod,
+    SYM_END,
     internal::ppmd8::{Ppmd8, RangeDecoder},
 };
 
-/// A decoder to decode PPMd8 (PPMdI rev.1) compressed data.
+/// A decoder to decompress data using PPMd8 (PPMdI rev.1).
 pub struct Ppmd8Decoder<R: Read> {
     ppmd: Ppmd8<RangeDecoder<R>>,
     finished: bool,
 }
 
 impl<R: Read> Ppmd8Decoder<R> {
-    /// Creates a new [`Ppmd8Decoder`].
+    /// Creates a new [`Ppmd8Decoder`] which provides a reader over the uncompressed data.
+    ///
+    /// The given `order` must be between [`PPMD8_MIN_ORDER`] and [`PPMD8_MAX_ORDER`] (inclusive).
+    /// The given `mem_size` must be between [`PPMD8_MIN_MEM_SIZE`] and [`PPMD8_MAX_MEM_SIZE`] (inclusive).
     pub fn new(
         reader: R,
         order: u32,
@@ -20,7 +24,7 @@ impl<R: Read> Ppmd8Decoder<R> {
         restore_method: RestoreMethod,
     ) -> crate::Result<Self> {
         if !(PPMD8_MIN_ORDER..=PPMD8_MAX_ORDER).contains(&order)
-            || restore_method == RestoreMethod::Unsupported
+            || !(PPMD8_MIN_MEM_SIZE..=PPMD8_MAX_MEM_SIZE).contains(&mem_size)
         {
             return Err(Error::InvalidParameter);
         }
