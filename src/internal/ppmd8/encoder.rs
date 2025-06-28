@@ -2,7 +2,7 @@ use super::*;
 use crate::internal::{ppmd_update_prob_1, PPMD_INT_BITS};
 
 impl<W: Write> Ppmd8<RangeEncoder<W>> {
-    pub(crate) fn encode_symbol(&mut self, symbol: u8) -> Result<(), std::io::Error> {
+    pub(crate) fn encode_symbol(&mut self, symbol: i32) -> Result<(), std::io::Error> {
         unsafe {
             let mut char_mask: [u8; 256];
             if self.min_context.as_ref().num_stats != 0 {
@@ -11,7 +11,7 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
 
                 summ_freq = self.rc.correct_sum_range(summ_freq);
 
-                if s.as_ref().symbol == symbol {
+                if s.as_ref().symbol as i32 == symbol {
                     self.rc.encode_final(0, s.as_ref().freq as u32, summ_freq)?;
                     self.found_state = s;
                     self.update1_0();
@@ -24,7 +24,7 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
 
                 for _ in 0..num_stats {
                     s = s.offset(1);
-                    if s.as_ref().symbol == symbol {
+                    if s.as_ref().symbol as i32 == symbol {
                         self.rc
                             .encode_final(sum, s.as_ref().freq as u32, summ_freq)?;
                         self.found_state = s;
@@ -49,7 +49,7 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                 let bound = (range >> 14) * pr;
                 pr = ppmd_update_prob_1(pr);
 
-                if s.as_ref().symbol == symbol {
+                if s.as_ref().symbol as i32 == symbol {
                     *prob = (pr + (1 << PPMD_INT_BITS) as u32) as u16;
                     self.rc.range = bound;
                     self.rc.normalize_remote()?;
@@ -78,6 +78,7 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                 while mc.as_ref().num_stats as u32 == num_masked {
                     self.order_fall += 1;
                     if mc.as_ref().suffix == 0 {
+                        // EndMarker (symbol = -1)
                         return Ok(());
                     }
                     mc = self.get_context(mc.as_ref().suffix);
@@ -93,7 +94,7 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
 
                 while i != 0 {
                     let cur = s.as_ref().symbol as u32;
-                    if cur as i32 == symbol as i32 {
+                    if cur as i32 == symbol {
                         let low = sum;
                         let freq = s.as_ref().freq as u32;
 

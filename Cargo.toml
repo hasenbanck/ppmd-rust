@@ -5,7 +5,7 @@ homepage = "https://github.com/hasenbanck/sevenz-rust2/tree/main/ppmd-rust"
 repository = "https://github.com/hasenbanck/sevenz-rust2/tree/main/ppmd-rust"
 edition = "2021"
 rust-version = "1.82"
-version = "1.0.0"
+version = "1.1.0"
 keywords = ["ppmd"]
 license = "CC0-1.0"
 

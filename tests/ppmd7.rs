@@ -33,10 +33,7 @@ fn decoder_test(order: u32, memory: u32, input_data: &[u8], expected_string: &st
     let mut decoded = vec![0; expected_string.len()];
     decoder.read_exact(&mut decoded).unwrap();
 
-    assert_eq!(decoded.as_slice(), expected_string.as_bytes());
-
     let decoded_data = String::from_utf8(decoded).unwrap();
-
     assert_eq!(decoded_data, expected_string);
 }
 

@@ -54,7 +54,10 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
             match self.ppmd.decode_symbol() {
                 Ok(symbol) => sym = symbol,
                 Err(err) => {
-                    self.finished = true;
+                    if err.kind() == std::io::ErrorKind::UnexpectedEof {
+                        self.finished = true;
+                        return Ok(decoded);
+                    }
                     return Err(err);
                 }
             }
@@ -67,13 +70,13 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
             decoded += 1;
         }
 
+        let code = self.ppmd.range_decoder_code();
+
         if sym >= 0 {
             return Ok(decoded);
         }
 
         self.finished = true;
-
-        let code = self.ppmd.range_decoder_code();
 
         if sym != SYM_END || code != 0 {
             return Err(std::io::Error::new(
@@ -82,6 +85,7 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
             ));
         }
 
+        // END_MARKER detected
         Ok(decoded)
     }
 }
