@@ -4,7 +4,7 @@ use super::{Ppmd7, RangeEncoder};
 use crate::internal::{ppmd_update_prob_1, PPMD_INT_BITS};
 
 impl<W: Write> Ppmd7<RangeEncoder<W>> {
-    pub(crate) fn encode_symbol(&mut self, symbol: u8) -> Result<(), std::io::Error> {
+    pub(crate) fn encode_symbol(&mut self, symbol: i32) -> Result<(), std::io::Error> {
         unsafe {
             let mut char_mask: [u8; 256];
 
@@ -13,7 +13,7 @@ impl<W: Write> Ppmd7<RangeEncoder<W>> {
 
                 self.rc.range /= self.min_context.as_ref().data.multi_state.summ_freq as u32;
 
-                if s.as_ref().symbol == symbol {
+                if s.as_ref().symbol as i32 == symbol {
                     self.rc.encode_final(0, s.as_ref().freq as u32)?;
                     self.found_state = s;
                     self.update1_0();
@@ -25,7 +25,7 @@ impl<W: Write> Ppmd7<RangeEncoder<W>> {
 
                 for _ in 1..(self.min_context.as_ref().num_stats as u32) {
                     s = s.offset(1);
-                    if s.as_ref().symbol == symbol {
+                    if s.as_ref().symbol as i32 == symbol {
                         self.rc.encode_final(sum, s.as_ref().freq as u32)?;
                         self.found_state = s;
                         self.update1();
@@ -53,7 +53,7 @@ impl<W: Write> Ppmd7<RangeEncoder<W>> {
                 let bound = (range >> 14) * pr;
                 pr = ppmd_update_prob_1(pr);
 
-                if s.as_ref().symbol == symbol {
+                if s.as_ref().symbol as i32 == symbol {
                     *prob = (pr + (1 << PPMD_INT_BITS)) as u16;
 
                     self.rc.encode_bit_0(bound)?;
@@ -99,7 +99,7 @@ impl<W: Write> Ppmd7<RangeEncoder<W>> {
 
                 while i != 0 {
                     let cur = s.as_ref().symbol;
-                    if cur == symbol {
+                    if cur as i32 == symbol {
                         let low = sum;
                         let freq = s.as_ref().freq as u32;
 

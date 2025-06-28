@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  miri:
+  ppmd7withoutMarker:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -16,7 +16,41 @@ jobs:
         with:
           toolchain: nightly
           components: miri, rust-std
-      - name: Miri PPMd7
-        run: cargo +nightly miri test --lib encoder_7::test::ppmd7encoder_encode_decode
-      - name: Miri PPMd8
-        run: cargo +nightly miri test --lib encoder_8::test::ppmd8encoder_encode_decode
+      - name: Miri
+        run: cargo +nightly miri test --lib encoder_7::test::ppmd7encoder_without_end_marker
+
+  ppmd7withMarker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rust version
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+          components: miri, rust-std
+      - name: Miri
+        run: cargo +nightly miri test --lib encoder_7::test::ppmd7encoder_with_end_marker
+
+  ppmd8withoutMarker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rust version
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+          components: miri, rust-std
+      - name: Miri
+        run: cargo +nightly miri test --lib encoder_8::test::ppmd8encoder_without_end_marker
+
+  ppmd8withMarker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rust version
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+          components: miri, rust-std
+      - name: Miri
+        run: cargo +nightly miri test --lib encoder_8::test::ppmd8encoder_with_end_marker

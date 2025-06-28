@@ -5,7 +5,7 @@ use crate::{
 };
 
 impl<R: Read> Ppmd8<RangeDecoder<R>> {
-    pub(crate) unsafe fn decode_symbol(&mut self) -> Result<i32, std::io::Error> {
+    pub(crate) fn decode_symbol(&mut self) -> Result<i32, std::io::Error> {
         unsafe {
             let mut char_mask: [u8; 256];
 
