@@ -86,7 +86,7 @@ mod test {
 
     #[test]
     fn ppmd8encoder_without_end_marker() {
-        let test_data = include_str!("../tests/fixtures/apache2.txt");
+        let test_data = include_str!("../tests/fixtures/text/apache2.txt");
 
         let mut writer = Vec::new();
         {
@@ -108,7 +108,7 @@ mod test {
 
     #[test]
     fn ppmd8encoder_with_end_marker() {
-        let test_data = include_str!("../tests/fixtures/apache2.txt");
+        let test_data = include_str!("../tests/fixtures/text/apache2.txt");
 
         let mut writer = Vec::new();
         {

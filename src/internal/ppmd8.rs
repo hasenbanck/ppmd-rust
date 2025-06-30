@@ -151,10 +151,15 @@ impl<RC> Ppmd8<RC> {
 
         let mut k = 0;
         for i in 0..PPMD_NUM_INDEXES {
-            let step = if i >= 12 { 4 } else { (i >> 2) + 1 };
-            for _ in 0..step {
+            let mut step = if i >= 12 { 4 } else { (i >> 2) + 1 };
+            loop {
                 units2index[k as usize] = i as u8;
                 k += 1;
+
+                step -= 1;
+                if step == 0 {
+                    break;
+                }
             }
             index2units[i as usize] = k as u8;
         }
@@ -315,8 +320,7 @@ impl<RC> Ppmd8<RC> {
     unsafe fn glue_blocks(&mut self, n: &mut u32) {
         unsafe {
             let mut prev = n;
-            let mut i = 0;
-            while i < PPMD_NUM_INDEXES {
+            for i in 0..PPMD_NUM_INDEXES {
                 let mut next = self.free_list[i as usize];
                 self.free_list[i as usize] = 0;
                 while next != 0 {
@@ -337,7 +341,6 @@ impl<RC> Ppmd8<RC> {
                         }
                     }
                 }
-                i += 1;
             }
             *prev = 0;
         }
@@ -499,12 +502,13 @@ impl<RC> Ppmd8<RC> {
                         n = node.as_ref().next;
                         if node.as_ref().stamp != 0 {
                             prev = addr_of_mut!(node.as_mut().next);
-                        } else {
-                            *prev = n;
-                            cnt -= 1;
-                            if cnt == 0 {
-                                break;
-                            }
+                            continue;
+                        }
+
+                        *prev = n;
+                        cnt -= 1;
+                        if cnt == 0 {
+                            break;
                         }
                     }
                 }
@@ -617,7 +621,9 @@ impl<RC> Ppmd8<RC> {
             let mut sum_freq = freq;
             s.as_mut().freq = freq as u8;
 
-            for _ in 0..num_stats {
+            let mut i = num_stats;
+
+            loop {
                 s = s.offset(1);
                 let mut freq = s.as_ref().freq as u32;
                 esc_freq -= freq;
@@ -625,6 +631,11 @@ impl<RC> Ppmd8<RC> {
                 sum_freq += freq;
                 s.as_mut().freq = freq as u8;
                 flags |= Self::hi_bits_prepare(s.as_ref().symbol as u32);
+
+                i -= 1;
+                if i == 0 {
+                    break;
+                }
             }
 
             ctx.as_mut().data.multi_state.summ_freq =
@@ -695,7 +706,7 @@ impl<RC> Ppmd8<RC> {
 
             let mut s = stats.offset(ns as isize);
 
-            while s >= stats {
+            loop {
                 let successor = s.as_ref().successor;
                 if self.ptr_of_offset(successor) < self.units_start {
                     let fresh = ns;
@@ -715,7 +726,11 @@ impl<RC> Ppmd8<RC> {
                 } else {
                     s.as_mut().successor = 0;
                 }
+
                 s = s.offset(-1);
+                if s < stats {
+                    break;
+                }
             }
 
             if ns != ctx.as_ref().num_stats as i32 && order != 0 {
@@ -826,9 +841,13 @@ impl<RC> Ppmd8<RC> {
                 while self.max_context.as_ref().suffix != 0 {
                     self.max_context = self.get_context(self.max_context.as_ref().suffix);
                 }
-                while self.get_used_memory() > 3 * (self.size >> 2) {
+                loop {
                     self.cut_off(self.max_context, 0);
                     self.expand_text_area();
+
+                    if self.get_used_memory() <= 3 * (self.size >> 2) {
+                        break;
+                    }
                 }
                 self.glue_count = 0;
                 self.order_fall = self.max_order;
@@ -985,10 +1004,14 @@ impl<RC> Ppmd8<RC> {
                     if c.as_ref().num_stats != 0 {
                         s = self.get_multi_state_stats(c);
                         if s.as_ref().symbol as i32 != self.found_state.as_ref().symbol as i32 {
-                            while s.as_ref().symbol as i32
-                                != self.found_state.as_ref().symbol as i32
-                            {
+                            loop {
                                 s = s.offset(1);
+
+                                if s.as_ref().symbol as i32
+                                    == self.found_state.as_ref().symbol as i32
+                                {
+                                    break;
+                                }
                             }
                         }
                         if (s.as_ref().freq) < MAX_FREQ - 9 {
@@ -1217,9 +1240,12 @@ impl<RC> Ppmd8<RC> {
             // Sort the list by freq
             if s != stats {
                 let tmp = *s.as_ref();
-                while s != stats {
+                loop {
                     *s.offset(0).as_mut() = *s.offset(-1).as_ref();
                     s = s.offset(-1);
+                    if s == stats {
+                        break;
+                    }
                 }
                 *s.as_mut() = tmp;
             }
@@ -1233,8 +1259,9 @@ impl<RC> Ppmd8<RC> {
             sum_freq = (sum_freq + 4 + (adder)) >> 1;
             s.as_mut().freq = sum_freq as u8;
 
-            let num_stats = self.min_context.as_ref().num_stats as u32;
-            for _ in 0..num_stats {
+            let mut i = self.min_context.as_ref().num_stats as u32;
+
+            loop {
                 s = s.offset(1);
                 let mut freq = s.as_ref().freq as u32;
                 esc_freq -= freq;
@@ -1253,6 +1280,10 @@ impl<RC> Ppmd8<RC> {
                         }
                     }
                     *s1.as_mut() = tmp;
+                }
+                i -= 1;
+                if i == 0 {
+                    break;
                 }
             }
 
@@ -1442,12 +1473,16 @@ impl<RC> Ppmd8<RC> {
     unsafe fn mask_symbols(char_mask: &mut [u8; 256], s: NonNull<State>, mut s2: NonNull<State>) {
         unsafe {
             char_mask[s.as_ref().symbol as usize] = 0;
-            while s2 < s {
+            loop {
                 let sym0 = s2.offset(0).as_ref().symbol as u32;
                 let sym1 = s2.offset(1).as_ref().symbol as u32;
                 s2 = s2.offset(2);
                 char_mask[sym0 as usize] = 0;
                 char_mask[sym1 as usize] = 0;
+
+                if s2 >= s {
+                    break;
+                }
             }
         }
     }

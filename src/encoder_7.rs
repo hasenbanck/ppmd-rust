@@ -78,7 +78,7 @@ mod test {
 
     #[test]
     fn ppmd7encoder_without_end_marker() {
-        let test_data = include_str!("../tests/fixtures/apache2.txt");
+        let test_data = include_str!("../tests/fixtures/text/apache2.txt");
 
         let mut data = Vec::new();
         {
@@ -98,7 +98,7 @@ mod test {
 
     #[test]
     fn ppmd7encoder_with_end_marker() {
-        let test_data = include_str!("../tests/fixtures/apache2.txt");
+        let test_data = include_str!("../tests/fixtures/text/apache2.txt");
 
         let mut data = Vec::new();
         {
