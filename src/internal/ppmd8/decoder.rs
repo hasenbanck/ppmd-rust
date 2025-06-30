@@ -28,9 +28,9 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                 }
 
                 self.prev_success = 0;
-                let num_stats = self.min_context.as_ref().num_stats as u32;
+                let mut i = self.min_context.as_ref().num_stats as u32;
 
-                for _ in 0..num_stats {
+                loop {
                     s = s.offset(1);
                     count = count.wrapping_sub(s.as_ref().freq as u32);
                     if (count as i32) < 0 {
@@ -41,6 +41,11 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                         let sym = s.as_ref().symbol;
                         self.update1();
                         return Ok(sym as i32);
+                    }
+
+                    i -= 1;
+                    if i == 0 {
+                        break;
                     }
                 }
 
@@ -89,17 +94,21 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                 let mut mc = self.min_context;
                 let num_masked = mc.as_ref().num_stats as u32;
 
-                while mc.as_ref().num_stats as u32 == num_masked {
+                loop {
                     self.order_fall += 1;
                     if mc.as_ref().suffix == 0 {
                         return Ok(SYM_END);
                     }
                     mc = self.get_context(mc.as_ref().suffix);
+
+                    if mc.as_ref().num_stats as u32 != num_masked {
+                        break;
+                    }
                 }
 
                 let s = self.get_multi_state_stats(mc);
                 let mut num = (mc.as_ref().num_stats as u32) + 1;
-                let num2 = num / 2;
+                let mut num2 = num / 2;
 
                 num &= 1;
                 let mut hi_cnt = s.as_ref().freq as u32
@@ -108,12 +117,17 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                 let mut s = s.offset(num as isize);
                 self.min_context = mc;
 
-                for _ in 0..num2 {
+                loop {
                     let sym0 = s.offset(0).as_ref().symbol as u32;
                     let sym1 = s.offset(1).as_ref().symbol as u32;
                     s = s.offset(2);
                     hi_cnt += s.offset(-2).as_ref().freq as u32 & char_mask[sym0 as usize] as u32;
                     hi_cnt += s.offset(-1).as_ref().freq as u32 & char_mask[sym1 as usize] as u32;
+
+                    num2 -= 1;
+                    if num2 == 0 {
+                        break;
+                    }
                 }
 
                 let see_source = self.make_esc_freq(num_masked, &mut freq_sum);
@@ -131,6 +145,7 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                             s.as_ref().freq as u32 & char_mask[s.as_ref().symbol as usize] as u32,
                         );
                         s = s.offset(1);
+
                         if (count as i32) < 0 {
                             break;
                         }
@@ -166,9 +181,13 @@ impl<R: Read> Ppmd8<RangeDecoder<R>> {
                 let s2 = s
                     .offset(self.min_context.as_ref().num_stats as i32 as isize)
                     .offset(1);
-                while s < s2 {
+                loop {
                     char_mask[s.as_ref().symbol as usize] = 0;
                     s = s.offset(1);
+
+                    if s >= s2 {
+                        break;
+                    }
                 }
             }
         }

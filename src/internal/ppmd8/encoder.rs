@@ -20,9 +20,9 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
 
                 self.prev_success = 0;
                 let mut sum = s.as_ref().freq as u32;
-                let num_stats = self.min_context.as_ref().num_stats as u32;
+                let mut i = self.min_context.as_ref().num_stats as u32;
 
-                for _ in 0..num_stats {
+                loop {
                     s = s.offset(1);
                     if s.as_ref().symbol as i32 == symbol {
                         self.rc
@@ -32,6 +32,11 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                         return Ok(());
                     }
                     sum += s.as_ref().freq as u32;
+
+                    i -= 1;
+                    if i == 0 {
+                        break;
+                    }
                 }
 
                 self.rc.encode(sum, summ_freq.wrapping_sub(sum), summ_freq);
@@ -75,13 +80,17 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                 let mut mc = self.min_context;
                 let num_masked = mc.as_ref().num_stats as u32;
 
-                while mc.as_ref().num_stats as u32 == num_masked {
+                loop {
                     self.order_fall += 1;
                     if mc.as_ref().suffix == 0 {
                         // EndMarker (symbol = -1)
                         return Ok(());
                     }
                     mc = self.get_context(mc.as_ref().suffix);
+
+                    if mc.as_ref().num_stats as u32 != num_masked {
+                        break;
+                    }
                 }
 
                 self.min_context = mc;
@@ -92,7 +101,7 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                 let mut sum = 0u32;
                 let mut i = (self.min_context.as_ref().num_stats as u32) + 1;
 
-                while i != 0 {
+                loop {
                     let cur = s.as_ref().symbol as u32;
                     if cur as i32 == symbol {
                         let low = sum;
@@ -128,7 +137,11 @@ impl<W: Write> Ppmd8<RangeEncoder<W>> {
                     }
                     sum += s.as_ref().freq as u32 & char_mask[cur as usize] as u32;
                     s = s.offset(1);
-                    i = i.wrapping_sub(1);
+
+                    i -= 1;
+                    if i == 0 {
+                        break;
+                    }
                 }
 
                 let mut total = sum.wrapping_add(esc_freq);

@@ -1,0 +1,655 @@
+17-11-21 02:47:08 [INFO:prod.updater.cli] Starting updater updater-785545fc98-pgmcx@prod-all-qa7
+17-11-21 02:47:08 [DEBUG:asyncio] Using selector: EpollSelector
+17-11-21 02:47:08 [DEBUG:prod.rpc.application] App add endpoint <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>
+17-11-21 02:47:08 [INFO:prod.rpc.application] Node found <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, updater-785545fc98-pgmcx@prod-all-qa7, set()
+17-11-21 02:47:08 [DEBUG:prod.updater.database] returning updater.settings:fus_url = https://test-02.example.com
+17-11-21 02:47:08 [DEBUG:prod.updater.database] returning updater.settings:proxy =
+17-11-21 02:47:09 [DEBUG:prod.updater.database] returning updater.settings:edition = master
+17-11-21 02:47:09 [INFO:prod.updater.updater] looks like there is no current build installed
+17-11-21 02:47:09 [DEBUG:prod.updater.database] returning updater.settings:registry = test-docker.example.com
+17-11-21 02:47:09 [INFO:prod.rpc.application] Node update <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, updater-785545fc98-pgmcx@prod-all-qa7, set(), {<google.protobuf.pyext._message.ServiceDescriptor object at 0x7f45996001d0>, <google.protobuf.pyext._message.ServiceDescriptor object at 0x7f45996068d0>, <google.protobuf.pyext._message.ServiceDescriptor object at 0x7f4599606c70>}
+17-11-21 02:47:09 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetInfo(message= ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetInfo, request_id=1, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:09.406968+00:00, timeout=300, max_execution_time=None, expires=433500.232554876, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:09 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetInfo(message= ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetInfo, request_id=1, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:09.406968+00:00, timeout=300, max_execution_time=None, expires=433500.232554876, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:09 [WARNING:prod.rpc.application] Ready updater-785545fc98-pgmcx@prod-all-qa7
+17-11-21 02:47:09 [DEBUG:prod.rpc.application] Send response: message=docker_registry_url: "test-docker.example.com"
+, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetInfo, request_id=1, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:09.409054+00:00, timeout=300, max_execution_time=None, expires=433500.234602527, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:09 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetVersionList(message=component: "prod"
+edition: "master"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetVersionList, request_id=2, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:09.756855+00:00, timeout=300, max_execution_time=None, expires=433500.582433874, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:09 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetVersionList(message=component: "prod"
+edition: "master"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetVersionList, request_id=2, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:09.756855+00:00, timeout=300, max_execution_time=None, expires=433500.582433874, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=versions {
+  version: "0.0.0.464"
+  size: 8357
+}
+versions {
+  version: "0.0.0.468"
+  size: 8358
+}
+versions {
+  version: "0.0.0.469"
+  size: 8356
+}
+versions {
+  version: "0.0.0.470"
+  size: 8604
+}
+versions {
+  version: "0.0.0.471"
+  size: 8138
+}
+versions {
+  version: "0.0.0.475"
+  size: 8369
+}
+versions {
+  version: "0.0.0.477"
+  size: 7939
+}
+versions {
+  version: "0.0.0.481"
+  size: 8386
+}
+versions {
+  version: "0.0.0.485"
+  size: 8334
+}
+versions {
+  version: "0.0.0.492"
+  size: 8366
+}
+versions {
+  version: "0.0.0.494"
+  size: 8363
+}
+versions {
+  version: "0.0.0.501"
+  size: 8366
+}
+versions {
+  version: "0.0.0.505"
+  size: 7606
+}
+versions {
+  version: "0.0.0.511"
+  size: 7443
+}
+versions {
+  version: "0.0.0.513"
+  size: 7539
+}
+versions {
+  version: "0.0.0.523"
+  size: 7629
+}
+versions {
+  version: "0.0.0.525"
+  size: 7466
+}
+versions {
+  version: "0.0.0.527"
+  size: 7362
+}
+versions {
+  version: "0.0.0.531"
+  size: 7364
+}
+versions {
+  version: "0.0.0.532"
+  size: 7468
+}
+versions {
+  version: "0.0.0.534"
+  size: 7559
+}
+versions {
+  version: "0.0.0.538"
+  size: 7557
+}
+versions {
+  version: "0.0.0.546"
+  size: 7656
+}
+versions {
+  version: "0.0.0.553"
+  size: 7652
+}
+versions {
+  version: "0.0.0.557"
+  size: 7650
+}
+versions {
+  version: "0.0.0.563"
+  size: 7780
+}
+versions {
+  version: "0.0.0.567"
+  size: 7770
+}
+versions {
+  version: "0.0.0.569"
+  size: 8045
+}
+versions {
+  version: "0.0.0.571"
+  size: 7815
+}
+versions {
+  version: "0.0.0.573"
+  size: 7943
+}
+versions {
+  version: "0.0.0.574"
+  size: 7986
+}
+versions {
+  version: "0.0.0.575"
+  size: 8062
+}
+versions {
+  version: "0.0.0.576"
+  size: 8224
+}
+versions {
+  version: "0.0.0.581"
+  size: 8063
+}
+versions {
+  version: "0.0.0.584"
+  size: 7980
+}
+versions {
+  version: "0.0.0.586"
+  size: 7836
+}
+versions {
+  version: "0.0.0.590"
+  size: 7835
+}
+versions {
+  version: "0.0.0.595"
+  size: 7925
+}
+versions {
+  version: "0.0.0.598"
+  size: 7841
+}
+versions {
+  version: "0.0.0.601"
+  size: 7832
+}
+versions {
+  version: "0.0.0.605"
+  size: 7914
+}
+versions {
+  version: "0.0.0.613"
+  size: 7840
+}
+versions {
+  version: "0.0.0.615"
+  size: 7916
+}
+versions {
+  version: "0.0.0.616"
+  size: 7760
+}
+versions {
+  version: "0.0.0.618"
+  size: 7916
+}
+versions {
+  version: "0.0.0.626"
+  size: 7827
+}
+versions {
+  version: "0.0.0.628"
+  size: 7919
+}
+versions {
+  version: "0.0.0.635"
+  size: 7855
+}
+versions {
+  version: "0.0.0.641"
+  size: 7856
+}
+versions {
+  version: "0.0.0.646"
+  size: 7835
+}
+versions {
+  version: "0.0.0.654"
+  size: 7693
+}
+versions {
+  version: "0.0.0.656"
+  size: 7848
+}
+versions {
+  version: "0.0.0.658"
+  size: 7770
+}
+versions {
+  version: "0.0.0.666"
+  size: 7771
+}
+versions {
+  version: "0.0.0.667"
+  size: 7919
+}
+versions {
+  version: "0.0.0.671"
+  size: 7897
+}
+versions {
+  version: "0.0.0.678"
+  size: 7772
+}
+versions {
+  version: "0.0.0.690"
+  size: 7902
+}
+versions {
+  version: "0.0.0.695"
+  size: 7920
+}
+versions {
+  version: "0.0.0.716"
+  size: 7847
+}
+versions {
+  version: "0.0.0.720"
+  size: 7767
+}
+versions {
+  version: "0.0.0.732"
+  size: 7763
+}
+versions {
+  version: "0.0.0.735"
+  size: 7906
+}
+versions {
+  version: "0.0.0.737"
+  size: 7770
+}
+versions {
+  version: "0.0.0.739"
+  size: 7770
+}
+versions {
+  version: "0.0.0.740"
+  size: 7930
+}
+, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetVersionList, request_id=2, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:09.757868+00:00, timeout=300, max_execution_time=None, expires=433500.583414912, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [INFO:prod.updater.updater] updating from "" to "0.0.0.740" edition master
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileList(message=component: "prod"
+version: "0.0.0.740"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileList, request_id=3, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.061483+00:00, timeout=300, max_execution_time=None, expires=433500.887035321, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileList(message=component: "prod"
+version: "0.0.0.740"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileList, request_id=3, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.061483+00:00, timeout=300, max_execution_time=None, expires=433500.887035321, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=files {
+  path: "components/prod.postgres/deploy.yaml"
+  size: 765
+  md5: "5ba1cad4c0bc616d14a51716cdeaf496"
+}
+files {
+  path: "components/prod.artifactory/deploy.yaml"
+  size: 1930
+  md5: "b4873086c8e637e0b4bc4dc7051ebb77"
+}
+files {
+  path: "components/prod.av/deploy.yaml"
+  size: 3031
+  md5: "da96d490bac9c86f93722d7b745ab3a0"
+}
+files {
+  path: "components/prod.authorization/deploy.yaml"
+  size: 1271
+  md5: "e7de5b6fa85e36a7c92f33ae58beb4b6"
+}
+files {
+  path: "components/prod.av/deploy.yaml"
+  size: 3051
+  md5: "ad98731b3eb778ab7a62f9ad1bc6193c"
+}
+files {
+  path: "components/prod.license/deploy.yaml"
+  size: 1256
+  md5: "9c1a7a66c3249a18d353d4d53def1f2a"
+}
+files {
+  path: "components/prod.unpacker/deploy.yaml"
+  size: 2843
+  md5: "7149a12955cd044f8fcb77b9bedb4381"
+}
+files {
+  path: "components/prod.rabbitmq/deploy.yaml"
+  size: 734
+  md5: "fc1cd31629ae893d279bcb2f565d8232"
+}
+files {
+  path: "components/prod.web-api/deploy.yaml"
+  size: 2211
+  md5: "c6d218e40c2cbade4ee8bd0fe1ead169"
+}
+files {
+  path: "components/prod.check-me/deploy.yaml"
+  size: 5879
+  md5: "1c3e18fd4f47b08473698473ea7d049f"
+}
+files {
+  path: "components/prod.cni-cleanup/deploy.yaml"
+  size: 1027
+  md5: "c90f82481da65803971c4f325d5850a8"
+}
+files {
+  path: "components/prod.dpi/deploy.yaml"
+  size: 3561
+  md5: "c6243b27bc094c65b6050b5863d2902f"
+}
+files {
+  path: "components/prod.frontend-ui/deploy.yaml"
+  size: 1167
+  md5: "6c672b7bfd9b95aff464a47080a1f8d6"
+}
+files {
+  path: "components/prod.configurator/deploy.yaml"
+  size: 1521
+  md5: "5021a948b24335c8e7c69dcfb047ef94"
+}
+files {
+  path: "components/prod.updater/deploy.yaml"
+  size: 1831
+  md5: "64c7af5a8d72df73ddfbfd50ec8b8296"
+}
+files {
+  path: "components/prod.av/deploy.yaml"
+  size: 4081
+  md5: "dac839dcde82421bb60eb104122a2265"
+}
+files {
+  path: "components/prod.aggregator/deploy.yaml"
+  size: 972
+  md5: "23051a826207f641c26248c412453e07"
+}
+files {
+  path: "components/prod.scan-machine/deploy.yaml"
+  size: 2946
+  md5: "330504ae2c51dcae7af9148783865f36"
+}
+files {
+  path: "components/prod.av-avira/deploy.yaml"
+  size: 3027
+  md5: "8f41e1644ea58c76692d5bf86678f53a"
+}
+files {
+  path: "components/prod.db-shard-manager/deploy.yaml"
+  size: 1054
+  md5: "e325842e56b2a3383dee5312dc3602ae"
+}
+files {
+  path: "components/prod.updater-av/deploy.yaml"
+  size: 2204
+  md5: "a38024960e209928f3ee61a5d19d2f65"
+}
+files {
+  path: "components/prod.mail-agent/deploy.yaml"
+  size: 6400
+  md5: "89603160115ac3c8c4d5471e78df0215"
+}
+files {
+  path: "components/prod.icap-server/deploy.yaml"
+  size: 4371
+  md5: "0a726f20f7664cb5a0be213fbfa878c3"
+}
+files {
+  path: "components/prod.sso/deploy.yaml"
+  size: 4038
+  md5: "bb30b4a11ac17c73dce6e2bc11579875"
+}
+files {
+  path: "components/prod.db-shard/deploy.yaml"
+  size: 3788
+  md5: "6c0e63f06b6844c5783c54be577e7475"
+}
+, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileList, request_id=3, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.061940+00:00, timeout=300, max_execution_time=None, expires=433500.887493212, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.postgres/deploy.yaml"
+md5: "5ba1cad4c0bc616d14a51716cdeaf496"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=4, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.113167+00:00, timeout=300, max_execution_time=None, expires=433500.938724699, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.postgres/deploy.yaml"
+md5: "5ba1cad4c0bc616d14a51716cdeaf496"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=4, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.113167+00:00, timeout=300, max_execution_time=None, expires=433500.938724699, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=4, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.113982+00:00, timeout=300, max_execution_time=None, expires=433500.939529846, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.artifactory/deploy.yaml"
+md5: "b4873086c8e637e0b4bc4dc7051ebb77"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=5, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.189464+00:00, timeout=300, max_execution_time=None, expires=433501.015032686, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.artifactory/deploy.yaml"
+md5: "b4873086c8e637e0b4bc4dc7051ebb77"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=5, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.189464+00:00, timeout=300, max_execution_time=None, expires=433501.015032686, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=5, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.190350+00:00, timeout=300, max_execution_time=None, expires=433501.015900021, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.av/deploy.yaml"
+md5: "da96d490bac9c86f93722d7b745ab3a0"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=6, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.264920+00:00, timeout=300, max_execution_time=None, expires=433501.09049464, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.av/deploy.yaml"
+md5: "da96d490bac9c86f93722d7b745ab3a0"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=6, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.264920+00:00, timeout=300, max_execution_time=None, expires=433501.09049464, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=6, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.265756+00:00, timeout=300, max_execution_time=None, expires=433501.091303622, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.authorization/deploy.yaml"
+md5: "e7de5b6fa85e36a7c92f33ae58beb4b6"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=7, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.339833+00:00, timeout=300, max_execution_time=None, expires=433501.16539582, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.authorization/deploy.yaml"
+md5: "e7de5b6fa85e36a7c92f33ae58beb4b6"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=7, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.339833+00:00, timeout=300, max_execution_time=None, expires=433501.16539582, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=7, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.340500+00:00, timeout=300, max_execution_time=None, expires=433501.166052475, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.av/deploy.yaml"
+md5: "ad98731b3eb778ab7a62f9ad1bc6193c"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=8, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.420666+00:00, timeout=300, max_execution_time=None, expires=433501.246238602, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.av/deploy.yaml"
+md5: "ad98731b3eb778ab7a62f9ad1bc6193c"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=8, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.420666+00:00, timeout=300, max_execution_time=None, expires=433501.246238602, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=8, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.421576+00:00, timeout=300, max_execution_time=None, expires=433501.247124815, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.license/deploy.yaml"
+md5: "9c1a7a66c3249a18d353d4d53def1f2a"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=9, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.685228+00:00, timeout=300, max_execution_time=None, expires=433501.51080492, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.license/deploy.yaml"
+md5: "9c1a7a66c3249a18d353d4d53def1f2a"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=9, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.685228+00:00, timeout=300, max_execution_time=None, expires=433501.51080492, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=9, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.686222+00:00, timeout=300, max_execution_time=None, expires=433501.511771564, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.unpacker/deploy.yaml"
+md5: "7149a12955cd044f8fcb77b9bedb4381"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=10, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.771066+00:00, timeout=300, max_execution_time=None, expires=433501.596633703, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.unpacker/deploy.yaml"
+md5: "7149a12955cd044f8fcb77b9bedb4381"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=10, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.771066+00:00, timeout=300, max_execution_time=None, expires=433501.596633703, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=10, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.771915+00:00, timeout=300, max_execution_time=None, expires=433501.597464335, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.rabbitmq/deploy.yaml"
+md5: "fc1cd31629ae893d279bcb2f565d8232"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=11, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.860300+00:00, timeout=300, max_execution_time=None, expires=433501.685874072, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.rabbitmq/deploy.yaml"
+md5: "fc1cd31629ae893d279bcb2f565d8232"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=11, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.860300+00:00, timeout=300, max_execution_time=None, expires=433501.685874072, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=11, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.861397+00:00, timeout=300, max_execution_time=None, expires=433501.686948876, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.web-api/deploy.yaml"
+md5: "c6d218e40c2cbade4ee8bd0fe1ead169"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=12, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.921705+00:00, timeout=300, max_execution_time=None, expires=433501.747273275, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.web-api/deploy.yaml"
+md5: "c6d218e40c2cbade4ee8bd0fe1ead169"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=12, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.921705+00:00, timeout=300, max_execution_time=None, expires=433501.747273275, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=12, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.922409+00:00, timeout=300, max_execution_time=None, expires=433501.747956226, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:10 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.check-me/deploy.yaml"
+md5: "1c3e18fd4f47b08473698473ea7d049f"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=13, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.988815+00:00, timeout=300, max_execution_time=None, expires=433501.81438117, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:10 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.check-me/deploy.yaml"
+md5: "1c3e18fd4f47b08473698473ea7d049f"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=13, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.988815+00:00, timeout=300, max_execution_time=None, expires=433501.81438117, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=13, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:10.989744+00:00, timeout=300, max_execution_time=None, expires=433501.815290846, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.cni-cleanup/deploy.yaml"
+md5: "c90f82481da65803971c4f325d5850a8"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=14, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.087412+00:00, timeout=300, max_execution_time=None, expires=433501.912986372, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.cni-cleanup/deploy.yaml"
+md5: "c90f82481da65803971c4f325d5850a8"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=14, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.087412+00:00, timeout=300, max_execution_time=None, expires=433501.912986372, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=14, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.088197+00:00, timeout=300, max_execution_time=None, expires=433501.91374366, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.dpi/deploy.yaml"
+md5: "c6243b27bc094c65b6050b5863d2902f"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=15, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.156600+00:00, timeout=300, max_execution_time=None, expires=433501.982171056, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.dpi/deploy.yaml"
+md5: "c6243b27bc094c65b6050b5863d2902f"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=15, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.156600+00:00, timeout=300, max_execution_time=None, expires=433501.982171056, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=15, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.157489+00:00, timeout=300, max_execution_time=None, expires=433501.983037608, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.frontend-ui/deploy.yaml"
+md5: "6c672b7bfd9b95aff464a47080a1f8d6"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=16, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.235168+00:00, timeout=300, max_execution_time=None, expires=433502.060736462, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.frontend-ui/deploy.yaml"
+md5: "6c672b7bfd9b95aff464a47080a1f8d6"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=16, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.235168+00:00, timeout=300, max_execution_time=None, expires=433502.060736462, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=16, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.235993+00:00, timeout=300, max_execution_time=None, expires=433502.061540797, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.configurator/deploy.yaml"
+md5: "5021a948b24335c8e7c69dcfb047ef94"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=17, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.304768+00:00, timeout=300, max_execution_time=None, expires=433502.1303399, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.configurator/deploy.yaml"
+md5: "5021a948b24335c8e7c69dcfb047ef94"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=17, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.304768+00:00, timeout=300, max_execution_time=None, expires=433502.1303399, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=17, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.305691+00:00, timeout=300, max_execution_time=None, expires=433502.131240063, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.updater/deploy.yaml"
+md5: "64c7af5a8d72df73ddfbfd50ec8b8296"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=18, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.375539+00:00, timeout=300, max_execution_time=None, expires=433502.201109421, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.updater/deploy.yaml"
+md5: "64c7af5a8d72df73ddfbfd50ec8b8296"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=18, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.375539+00:00, timeout=300, max_execution_time=None, expires=433502.201109421, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=18, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.376476+00:00, timeout=300, max_execution_time=None, expires=433502.202026379, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.av/deploy.yaml"
+md5: "dac839dcde82421bb60eb104122a2265"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=19, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.453727+00:00, timeout=300, max_execution_time=None, expires=433502.279302203, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.av/deploy.yaml"
+md5: "dac839dcde82421bb60eb104122a2265"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=19, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.453727+00:00, timeout=300, max_execution_time=None, expires=433502.279302203, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=19, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.454844+00:00, timeout=300, max_execution_time=None, expires=433502.280396119, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.aggregator/deploy.yaml"
+md5: "23051a826207f641c26248c412453e07"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=20, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.550829+00:00, timeout=300, max_execution_time=None, expires=433502.376401415, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.aggregator/deploy.yaml"
+md5: "23051a826207f641c26248c412453e07"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=20, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.550829+00:00, timeout=300, max_execution_time=None, expires=433502.376401415, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=20, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.551828+00:00, timeout=300, max_execution_time=None, expires=433502.377377439, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.scan-machine/deploy.yaml"
+md5: "330504ae2c51dcae7af9148783865f36"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=21, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.614390+00:00, timeout=300, max_execution_time=None, expires=433502.439954335, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.scan-machine/deploy.yaml"
+md5: "330504ae2c51dcae7af9148783865f36"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=21, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.614390+00:00, timeout=300, max_execution_time=None, expires=433502.439954335, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=21, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.615165+00:00, timeout=300, max_execution_time=None, expires=433502.440716119, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.av-avira/deploy.yaml"
+md5: "8f41e1644ea58c76692d5bf86678f53a"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=22, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.711616+00:00, timeout=300, max_execution_time=None, expires=433502.537188365, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.av-avira/deploy.yaml"
+md5: "8f41e1644ea58c76692d5bf86678f53a"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=22, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.711616+00:00, timeout=300, max_execution_time=None, expires=433502.537188365, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=22, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.712635+00:00, timeout=300, max_execution_time=None, expires=433502.538185906, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.db-shard-manager/deploy.yaml"
+md5: "e325842e56b2a3383dee5312dc3602ae"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=23, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.783470+00:00, timeout=300, max_execution_time=None, expires=433502.609040639, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.db-shard-manager/deploy.yaml"
+md5: "e325842e56b2a3383dee5312dc3602ae"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=23, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.783470+00:00, timeout=300, max_execution_time=None, expires=433502.609040639, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=23, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.784224+00:00, timeout=300, max_execution_time=None, expires=433502.609770417, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.updater-av/deploy.yaml"
+md5: "a38024960e209928f3ee61a5d19d2f65"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=24, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.855073+00:00, timeout=300, max_execution_time=None, expires=433502.680648899, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Request <prod.rpc.endpoints.local.LocalEndpoint object at 0x7f4597aa1ef0>, proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.updater-av/deploy.yaml"
+md5: "a38024960e209928f3ee61a5d19d2f65"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=24, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.855073+00:00, timeout=300, max_execution_time=None, expires=433502.680648899, content_type=application/x-protobuf, properties=None))
+17-11-21 02:47:11 [DEBUG:prod.rpc.application] Send response: message=, context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=24, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.855946+00:00, timeout=300, max_execution_time=None, expires=433502.681493563, content_type=application/x-protobuf, properties=None)
+17-11-21 02:47:11 [DEBUG:prod.rpc.endpoints.base] Send request: proto.ms.UpdateStorage:GetFileContent(message=component: "prod"
+version: "0.0.0.740"
+path: "components/prod.mail-agent/deploy.yaml"
+md5: "89603160115ac3c8c4d5471e78df0215"
+ ,context=Context(descriptor=proto.ms.UpdateStorage, method_name=GetFileContent, request_id=25, scan_id=None, node_id=updater-785545fc98-pgmcx@prod-all-qa7, error_id=None, priority=0, time=2017-11-21 02:47:11.923038+00:00, timeout=300, max_execution_time=None, expires=433502.748612271, content_type=application/x-protobuf, properties=None))
