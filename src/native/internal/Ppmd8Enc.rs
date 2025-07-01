@@ -110,10 +110,7 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
         Ppmd8_RangeEnc_Encode(p, sum, summFreq.wrapping_sub(sum), summFreq);
         let mut z: size_t = 0;
         z = 0 as std::ffi::c_int as size_t;
-        while z
-            < (256 as std::ffi::c_int as std::ffi::c_ulong)
-                .wrapping_div(::core::mem::size_of::<size_t>() as std::ffi::c_ulong)
-        {
+        while z < 256usize.wrapping_div(::core::mem::size_of::<size_t>()) {
             charMask[z.wrapping_add(0 as std::ffi::c_int as size_t) as usize] =
                 !(0 as std::ffi::c_int as size_t);
             charMask[z.wrapping_add(1 as std::ffi::c_int as size_t) as usize] =
@@ -239,10 +236,7 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
         .wrapping_sub(bound);
         let mut z_0: size_t = 0;
         z_0 = 0 as std::ffi::c_int as size_t;
-        while z_0
-            < (256 as std::ffi::c_int as std::ffi::c_ulong)
-                .wrapping_div(::core::mem::size_of::<size_t>() as std::ffi::c_ulong)
-        {
+        while z_0 < 256usize.wrapping_div(::core::mem::size_of::<size_t>()) {
             charMask[z_0.wrapping_add(0 as std::ffi::c_int as size_t) as usize] =
                 !(0 as std::ffi::c_int as size_t);
             charMask[z_0.wrapping_add(1 as std::ffi::c_int as size_t) as usize] =

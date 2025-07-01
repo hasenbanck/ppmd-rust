@@ -10,8 +10,6 @@
 
 use super::*;
 
-pub type size_t = usize;
-
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CPpmd7_Context_ {

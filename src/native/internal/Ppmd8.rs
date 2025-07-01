@@ -9,8 +9,6 @@
 )]
 
 use super::*;
-// TODO make this usize
-pub type size_t = std::ffi::c_ulong;
 
 #[derive(Copy, Clone)]
 #[repr(C)]

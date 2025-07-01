@@ -5,6 +5,7 @@ pub mod ppmd8;
 pub mod ppmd8dec;
 pub mod ppmd8enc;
 
+pub type size_t = usize;
 pub type Byte = std::ffi::c_uchar;
 pub type UInt16 = std::ffi::c_ushort;
 pub type Int32 = std::ffi::c_int;
