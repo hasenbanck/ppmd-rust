@@ -24,21 +24,6 @@ const PPMD_N3: u32 = 4;
 const PPMD_N4: u32 = (128 + 3 - PPMD_N1 - 2 * PPMD_N2 - 3 * PPMD_N3) / 4;
 const PPMD_NUM_INDEXES: u32 = PPMD_N1 + PPMD_N2 + PPMD_N3 + PPMD_N4;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct IByteIn_ {
-    pub read: Option<fn(IByteInPtr) -> u8>,
-}
-
-pub type IByteInPtr = *const IByteIn_;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct IByteOut_ {
-    pub write: Option<fn(IByteOutPtr, u8)>,
-}
-pub type IByteOutPtr = *const IByteOut_;
-
 #[derive(Copy, Clone, Default)]
 #[repr(C, packed)]
 pub struct See {

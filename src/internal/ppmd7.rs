@@ -11,7 +11,7 @@ use std::{
 
 pub(crate) use decoder::*;
 pub(crate) use encoder::*;
-pub(crate) use range_coding::*;
+pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
 
 use super::*;
 use crate::Error;

@@ -1,16 +1,28 @@
 mod decoder;
 mod encoder;
+mod range_coding;
 
 use std::{
     alloc::{alloc_zeroed, dealloc, Layout},
+    io::{Read, Write},
+    mem::ManuallyDrop,
     ptr::{null_mut, NonNull},
 };
 
-pub use decoder::*;
-pub use encoder::*;
+pub(crate) use decoder::*;
+pub(crate) use encoder::*;
+pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
 
 use super::*;
 use crate::{Error, RestoreMethod};
+
+const MAX_FREQ: u8 = 124;
+const UNIT_SIZE: isize = 12;
+const K_TOP_VALUE: u32 = 1 << 24;
+const K_BOT_VALUE: u32 = 1 << 15;
+const EMPTY_NODE: u32 = u32::MAX;
+const FLAG_RESCALED: u8 = 1 << 2;
+const FLAG_PREV_HIGH: u8 = 1 << 4;
 
 static K_EXP_ESCAPE: [u8; 16] = [25, 14, 9, 7, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2];
 
@@ -28,13 +40,6 @@ pub struct Node {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union StreamUnion {
-    pub input: IByteInPtr,
-    pub output: IByteOutPtr,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub struct Context {
     pub num_stats: u8,
     pub flags: u8,
@@ -43,7 +48,7 @@ pub struct Context {
     pub suffix: u32,
 }
 
-pub struct PPMd8 {
+pub struct PPMd8<RC> {
     pub min_context: *mut Context,
     pub max_context: *mut Context,
     pub found_state: *mut State,
@@ -62,10 +67,6 @@ pub struct PPMd8 {
     pub hi_unit: *mut u8,
     pub text: *mut u8,
     pub units_start: *mut u8,
-    pub range: u32,
-    pub code: u32,
-    pub low: u32,
-    pub stream: StreamUnion,
     pub index2units: [u8; 40],
     pub units2index: [u8; 128],
     pub free_list: [u32; 38],
@@ -78,9 +79,10 @@ pub struct PPMd8 {
     pub bin_summ: [[u16; 64]; 25],
     memory_ptr: NonNull<u8>,
     memory_layout: Layout,
+    rc: RC,
 }
 
-impl Drop for PPMd8 {
+impl<RC> Drop for PPMd8<RC> {
     fn drop(&mut self) {
         unsafe {
             dealloc(self.memory_ptr.as_ptr(), self.memory_layout);
@@ -88,9 +90,9 @@ impl Drop for PPMd8 {
     }
 }
 
-impl PPMd8 {
-    pub(crate) fn construct(
-        stream: StreamUnion,
+impl<RC> PPMd8<RC> {
+    fn construct(
+        rc: RC,
         max_order: u32,
         mem_size: u32,
         restore_method: RestoreMethod,
@@ -169,10 +171,6 @@ impl PPMd8 {
             hi_unit: null_mut(),
             text: null_mut(),
             units_start: null_mut(),
-            range: 0,
-            code: 0,
-            low: 0,
-            stream,
             index2units,
             units2index,
             free_list: [0; 38],
@@ -185,6 +183,7 @@ impl PPMd8 {
             bin_summ: [[0; 64]; 25],
             memory_ptr,
             memory_layout,
+            rc,
         };
 
         unsafe { restart_model(&mut ppmd) };
@@ -193,7 +192,7 @@ impl PPMd8 {
     }
 }
 
-unsafe fn insert_node(p: *mut PPMd8, node: *mut std::ffi::c_void, indx: std::ffi::c_uint) {
+unsafe fn insert_node<RC>(p: *mut PPMd8<RC>, node: *mut std::ffi::c_void, indx: std::ffi::c_uint) {
     (*(node as *mut Node)).stamp = 0xFFFFFFFF as std::ffi::c_uint;
     (*(node as *mut Node)).next = (*p).free_list[indx as usize];
     (*(node as *mut Node)).nu = (*p).index2units[indx as usize] as std::ffi::c_uint;
@@ -203,7 +202,7 @@ unsafe fn insert_node(p: *mut PPMd8, node: *mut std::ffi::c_void, indx: std::ffi
     (*p).stamps[indx as usize];
 }
 
-unsafe fn remove_node(p: *mut PPMd8, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
+unsafe fn remove_node<RC>(p: *mut PPMd8<RC>, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
     let node: *mut Node = ((*p).base).offset((*p).free_list[indx as usize] as isize)
         as *mut std::ffi::c_void as *mut Node;
     (*p).free_list[indx as usize] = (*node).next;
@@ -212,8 +211,8 @@ unsafe fn remove_node(p: *mut PPMd8, indx: std::ffi::c_uint) -> *mut std::ffi::c
     return node as *mut std::ffi::c_void;
 }
 
-unsafe fn split_block(
-    p: *mut PPMd8,
+unsafe fn split_block<RC>(
+    p: *mut PPMd8<RC>,
     mut ptr: *mut std::ffi::c_void,
     oldIndx: std::ffi::c_uint,
     newIndx: std::ffi::c_uint,
@@ -241,7 +240,7 @@ unsafe fn split_block(
     insert_node(p, ptr, i);
 }
 
-unsafe fn glue_free_blocks(p: *mut PPMd8) {
+unsafe fn glue_free_blocks<RC>(p: *mut PPMd8<RC>) {
     let mut n: u32 = 0;
     (*p).glue_count = ((1 as std::ffi::c_int) << 13 as std::ffi::c_int) as u32;
     (*p).stamps = [0; 38];
@@ -331,15 +330,18 @@ unsafe fn glue_free_blocks(p: *mut PPMd8) {
 }
 
 #[inline(never)]
-unsafe fn alloc_units_rare(p: *mut PPMd8, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
+unsafe fn alloc_units_rare<RC>(
+    p: *mut PPMd8<RC>,
+    index: std::ffi::c_uint,
+) -> *mut std::ffi::c_void {
     let mut i: std::ffi::c_uint = 0;
     if (*p).glue_count == 0 as std::ffi::c_int as u32 {
         glue_free_blocks(p);
-        if (*p).free_list[indx as usize] != 0 as std::ffi::c_int as u32 {
-            return remove_node(p, indx);
+        if (*p).free_list[index as usize] != 0 as std::ffi::c_int as u32 {
+            return remove_node(p, index);
         }
     }
-    i = indx;
+    i = index;
     loop {
         i = i.wrapping_add(1);
         if i == (4 as std::ffi::c_int
@@ -352,7 +354,7 @@ unsafe fn alloc_units_rare(p: *mut PPMd8, indx: std::ffi::c_uint) -> *mut std::f
                 / 4 as std::ffi::c_int) as std::ffi::c_uint
         {
             let numBytes: u32 =
-                (*p).index2units[indx as usize] as std::ffi::c_uint * 12 as std::ffi::c_int as u32;
+                (*p).index2units[index as usize] as std::ffi::c_uint * 12 as std::ffi::c_int as u32;
             let us: *mut u8 = (*p).units_start;
             (*p).glue_count = ((*p).glue_count).wrapping_sub(1);
             (*p).glue_count;
@@ -368,11 +370,11 @@ unsafe fn alloc_units_rare(p: *mut PPMd8, indx: std::ffi::c_uint) -> *mut std::f
         }
     }
     let block: *mut std::ffi::c_void = remove_node(p, i);
-    split_block(p, block, i, indx);
+    split_block(p, block, i, index);
     return block;
 }
 
-unsafe fn alloc_units(p: *mut PPMd8, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
+unsafe fn alloc_units<RC>(p: *mut PPMd8<RC>, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
     if (*p).free_list[indx as usize] != 0 as std::ffi::c_int as u32 {
         return remove_node(p, indx);
     }
@@ -386,8 +388,8 @@ unsafe fn alloc_units(p: *mut PPMd8, indx: std::ffi::c_uint) -> *mut std::ffi::c
     return alloc_units_rare(p, indx);
 }
 
-unsafe fn shrink_units(
-    p: *mut PPMd8,
+unsafe fn shrink_units<RC>(
+    p: *mut PPMd8<RC>,
     oldPtr: *mut std::ffi::c_void,
     oldNU: std::ffi::c_uint,
     newNU: std::ffi::c_uint,
@@ -424,7 +426,7 @@ unsafe fn shrink_units(
     return oldPtr;
 }
 
-unsafe fn free_units(p: *mut PPMd8, ptr: *mut std::ffi::c_void, nu: std::ffi::c_uint) {
+unsafe fn free_units<RC>(p: *mut PPMd8<RC>, ptr: *mut std::ffi::c_void, nu: std::ffi::c_uint) {
     insert_node(
         p,
         ptr,
@@ -433,7 +435,7 @@ unsafe fn free_units(p: *mut PPMd8, ptr: *mut std::ffi::c_void, nu: std::ffi::c_
     );
 }
 
-unsafe fn special_free_unit(p: *mut PPMd8, ptr: *mut std::ffi::c_void) {
+unsafe fn special_free_unit<RC>(p: *mut PPMd8<RC>, ptr: *mut std::ffi::c_void) {
     if ptr as *mut u8 != (*p).units_start {
         insert_node(p, ptr, 0 as std::ffi::c_int as std::ffi::c_uint);
     } else {
@@ -441,7 +443,7 @@ unsafe fn special_free_unit(p: *mut PPMd8, ptr: *mut std::ffi::c_void) {
     };
 }
 
-unsafe fn expand_text_area(p: *mut PPMd8) {
+unsafe fn expand_text_area<RC>(p: *mut PPMd8<RC>) {
     let mut count: [u32; 38] = [0; 38];
     let mut i: std::ffi::c_uint = 0;
     if (*p).lo_unit != (*p).hi_unit {
@@ -504,7 +506,7 @@ unsafe fn set_successor(p: *mut State, v: u32) {
 }
 
 #[inline(never)]
-unsafe fn restart_model(p: *mut PPMd8) {
+unsafe fn restart_model<RC>(p: *mut PPMd8<RC>) {
     let mut i: std::ffi::c_uint = 0;
     let mut k: std::ffi::c_uint = 0;
     let mut m: std::ffi::c_uint = 0;
@@ -618,8 +620,8 @@ unsafe fn restart_model(p: *mut PPMd8) {
     (*p).dummy_see.count = 64 as std::ffi::c_int as u8;
 }
 
-unsafe fn refresh(
-    p: *mut PPMd8,
+unsafe fn refresh<RC>(
+    p: *mut PPMd8<RC>,
     ctx: *mut Context,
     oldNU: std::ffi::c_uint,
     mut scale: std::ffi::c_uint,
@@ -678,7 +680,7 @@ unsafe fn swap_states(t1: *mut State, t2: *mut State) {
     *t2 = tmp;
 }
 
-unsafe fn cut_off(p: *mut PPMd8, ctx: *mut Context, order: std::ffi::c_uint) -> u32 {
+unsafe fn cut_off<RC>(p: *mut PPMd8<RC>, ctx: *mut Context, order: std::ffi::c_uint) -> u32 {
     let mut ns: std::ffi::c_int = (*ctx).num_stats as std::ffi::c_int;
     let mut nu: std::ffi::c_uint = 0;
     let mut stats: *mut State = 0 as *mut State;
@@ -818,7 +820,7 @@ unsafe fn cut_off(p: *mut PPMd8, ctx: *mut Context, order: std::ffi::c_uint) -> 
     return (ctx as *mut u8).offset_from((*p).base) as std::ffi::c_long as u32;
 }
 
-unsafe fn get_used_memory(p: *const PPMd8) -> u32 {
+unsafe fn get_used_memory<RC>(p: *const PPMd8<RC>) -> u32 {
     let mut v: u32 = 0 as std::ffi::c_int as u32;
     let mut i: std::ffi::c_uint = 0;
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
@@ -845,7 +847,7 @@ unsafe fn get_used_memory(p: *const PPMd8) -> u32 {
         .wrapping_sub(v * 12 as std::ffi::c_int as u32);
 }
 
-unsafe fn restore_model(p: *mut PPMd8, ctxError: *mut Context) {
+unsafe fn restore_model<RC>(p: *mut PPMd8<RC>, ctxError: *mut Context) {
     let mut c: *mut Context = 0 as *mut Context;
     let mut s: *mut State = 0 as *mut State;
     (*p).text = ((*p).base)
@@ -936,8 +938,8 @@ unsafe fn restore_model(p: *mut PPMd8, ctxError: *mut Context) {
     (*p).min_context = (*p).max_context;
 }
 #[inline(never)]
-unsafe fn create_successors(
-    p: *mut PPMd8,
+unsafe fn create_successors<RC>(
+    p: *mut PPMd8<RC>,
     skip: i32,
     mut s1: *mut State,
     mut c: *mut Context,
@@ -1065,7 +1067,11 @@ unsafe fn create_successors(
     }
     return c;
 }
-unsafe fn reduce_order(p: *mut PPMd8, mut s1: *mut State, mut c: *mut Context) -> *mut Context {
+unsafe fn reduce_order<RC>(
+    p: *mut PPMd8<RC>,
+    mut s1: *mut State,
+    mut c: *mut Context,
+) -> *mut Context {
     let mut s: *mut State = 0 as *mut State;
     let c1: *mut Context = c;
     let upBranch: u32 = ((*p).text).offset_from((*p).base) as std::ffi::c_long as u32;
@@ -1144,7 +1150,7 @@ unsafe fn reduce_order(p: *mut PPMd8, mut s1: *mut State, mut c: *mut Context) -
 }
 
 #[inline(never)]
-pub unsafe fn update_model(p: *mut PPMd8) {
+pub unsafe fn update_model<RC>(p: *mut PPMd8<RC>) {
     let mut maxSuccessor: u32 = 0;
     let mut minSuccessor: u32 = (*(*p).found_state).successor_0 as u32
         | ((*(*p).found_state).successor_1 as u32) << 16 as std::ffi::c_int;
@@ -1375,7 +1381,7 @@ pub unsafe fn update_model(p: *mut PPMd8) {
     (*p).max_context = (*p).min_context;
 }
 #[inline(never)]
-unsafe fn rescale(p: *mut PPMd8) {
+unsafe fn rescale<RC>(p: *mut PPMd8<RC>) {
     let mut i: std::ffi::c_uint = 0;
     let mut adder: std::ffi::c_uint = 0;
     let mut sumFreq: std::ffi::c_uint = 0;
@@ -1502,8 +1508,8 @@ unsafe fn rescale(p: *mut PPMd8) {
         ((*p).base).offset((*mc_0).union4.stats as isize) as *mut std::ffi::c_void as *mut State;
 }
 
-pub unsafe fn make_esc_freq(
-    p: *mut PPMd8,
+pub unsafe fn make_esc_freq<RC>(
+    p: *mut PPMd8<RC>,
     numMasked1: std::ffi::c_uint,
     escFreq: *mut u32,
 ) -> *mut See {
@@ -1545,7 +1551,7 @@ pub unsafe fn make_esc_freq(
     }
     return see;
 }
-unsafe fn next_context(p: *mut PPMd8) {
+unsafe fn next_context<RC>(p: *mut PPMd8<RC>) {
     let c: *mut Context = ((*p).base).offset(
         ((*(*p).found_state).successor_0 as u32
             | ((*(*p).found_state).successor_1 as u32) << 16 as std::ffi::c_int) as isize,
@@ -1560,7 +1566,7 @@ unsafe fn next_context(p: *mut PPMd8) {
     };
 }
 
-pub unsafe fn update1(p: *mut PPMd8) {
+pub unsafe fn update1<RC>(p: *mut PPMd8<RC>) {
     let mut s: *mut State = (*p).found_state;
     let mut freq: std::ffi::c_uint = (*s).freq as std::ffi::c_uint;
     freq = freq.wrapping_add(4 as std::ffi::c_int as std::ffi::c_uint);
@@ -1578,7 +1584,7 @@ pub unsafe fn update1(p: *mut PPMd8) {
     next_context(p);
 }
 
-pub unsafe fn update1_0(p: *mut PPMd8) {
+pub unsafe fn update1_0<RC>(p: *mut PPMd8<RC>) {
     let s: *mut State = (*p).found_state;
     let mc: *mut Context = (*p).min_context;
     let mut freq: std::ffi::c_uint = (*s).freq as std::ffi::c_uint;
@@ -1595,7 +1601,7 @@ pub unsafe fn update1_0(p: *mut PPMd8) {
     next_context(p);
 }
 
-pub unsafe fn update2(p: *mut PPMd8) {
+pub unsafe fn update2<RC>(p: *mut PPMd8<RC>) {
     let s: *mut State = (*p).found_state;
     let mut freq: std::ffi::c_uint = (*s).freq as std::ffi::c_uint;
     freq = freq.wrapping_add(4 as std::ffi::c_int as std::ffi::c_uint);
@@ -1607,4 +1613,62 @@ pub unsafe fn update2(p: *mut PPMd8) {
         rescale(p);
     }
     update_model(p);
+}
+
+impl<R: Read> PPMd8<RangeDecoder<R>> {
+    pub(crate) fn new_decoder(
+        reader: R,
+        mem_size: u32,
+        max_order: u32,
+        restore_method: RestoreMethod,
+    ) -> Result<Self, Error> {
+        let range_decoder = RangeDecoder::new(reader)?;
+        Self::construct(range_decoder, mem_size, max_order, restore_method)
+    }
+
+    pub(crate) fn into_inner(self) -> R {
+        let manual_drop_self = ManuallyDrop::new(self);
+        unsafe {
+            dealloc(
+                manual_drop_self.memory_ptr.as_ptr(),
+                manual_drop_self.memory_layout,
+            );
+        }
+        let rc = unsafe { std::ptr::read(&manual_drop_self.rc) };
+        let RangeDecoder { reader, .. } = rc;
+        reader
+    }
+
+    pub(crate) fn range_decoder_code(&self) -> u32 {
+        self.rc.code
+    }
+}
+
+impl<W: Write> PPMd8<RangeEncoder<W>> {
+    pub(crate) fn new_encoder(
+        writer: W,
+        mem_size: u32,
+        max_order: u32,
+        restore_method: RestoreMethod,
+    ) -> Result<Self, Error> {
+        let range_encoder = RangeEncoder::new(writer);
+        Self::construct(range_encoder, mem_size, max_order, restore_method)
+    }
+
+    pub(crate) fn into_inner(self) -> W {
+        let manual_drop_self = ManuallyDrop::new(self);
+        unsafe {
+            dealloc(
+                manual_drop_self.memory_ptr.as_ptr(),
+                manual_drop_self.memory_layout,
+            );
+        }
+        let rc = unsafe { std::ptr::read(&manual_drop_self.rc) };
+        let RangeEncoder { writer, .. } = rc;
+        writer
+    }
+
+    pub(crate) fn flush_range_encoder(&mut self) -> Result<(), std::io::Error> {
+        self.rc.flush()
+    }
 }
