@@ -26,45 +26,45 @@ const PPMD_NUM_INDEXES: u32 = PPMD_N1 + PPMD_N2 + PPMD_N3 + PPMD_N4;
 
 #[derive(Copy, Clone, Default)]
 #[repr(C, packed)]
-pub struct See {
-    pub summ: u16,
-    pub shift: u8,
-    pub count: u8,
+struct See {
+    summ: u16,
+    shift: u8,
+    count: u8,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C, packed)]
-pub struct State {
-    pub symbol: u8,
-    pub freq: u8,
-    pub successor_0: u16,
-    pub successor_1: u16,
+struct State {
+    symbol: u8,
+    freq: u8,
+    successor_0: u16,
+    successor_1: u16,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C, packed)]
-pub struct State2 {
-    pub symbol: u8,
-    pub freq: u8,
+struct State2 {
+    symbol: u8,
+    freq: u8,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C, packed)]
-pub struct State4 {
-    pub successor_0: u16,
-    pub successor_1: u16,
+struct State4 {
+    successor_0: u16,
+    successor_1: u16,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union Union2 {
-    pub summ_freq: u16,
-    pub state2: State2,
+union Union2 {
+    summ_freq: u16,
+    state2: State2,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union Union4 {
-    pub stats: u32,
-    pub state4: State4,
+union Union4 {
+    stats: u32,
+    state4: State4,
 }
