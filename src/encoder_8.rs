@@ -1,16 +1,14 @@
-use std::{io::Write, mem::ManuallyDrop};
+use std::io::Write;
 
 use crate::{
-    byte_writer::ByteWriter,
-    internal::ppmd8::{encode_symbol, range_encoder_flush, range_encoder_init, PPMd8, StreamUnion},
+    internal::ppmd8::{encode_symbol, PPMd8, RangeEncoder},
     Error, RestoreMethod, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER,
     SYM_END,
 };
 
 /// A encoder to compress data using PPMd8 (PPMdI rev.1).
 pub struct Ppmd8Encoder<W: Write> {
-    ppmd: PPMd8,
-    writer: ByteWriter<W>,
+    ppmd: PPMd8<RangeEncoder<W>>,
 }
 
 impl<W: Write> Ppmd8Encoder<W> {
@@ -30,25 +28,14 @@ impl<W: Write> Ppmd8Encoder<W> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut writer = ByteWriter::new(writer);
-        let stream = StreamUnion {
-            output: writer.byte_out_ptr(),
-        };
+        let ppmd = PPMd8::new_encoder(writer, order, mem_size, restore_method)?;
 
-        let mut ppmd = PPMd8::construct(stream, order, mem_size, restore_method)?;
-
-        unsafe { range_encoder_init(&mut ppmd) }
-
-        Ok(Self { ppmd, writer })
+        Ok(Self { ppmd })
     }
 
     /// Returns the inner writer.
     pub fn into_inner(self) -> W {
-        let manual_drop_self = ManuallyDrop::new(self);
-        let writer = unsafe { std::ptr::read(&manual_drop_self.writer) };
-        let ppmd = unsafe { std::ptr::read(&manual_drop_self.ppmd) };
-        drop(ppmd);
-        writer.inner.writer
+        self.ppmd.into_inner()
     }
 
     /// Finishes the encoding process.
@@ -56,15 +43,10 @@ impl<W: Write> Ppmd8Encoder<W> {
     /// Adds an end marker to the data if `with_end_marker` is set to `true`.
     pub fn finish(mut self, with_end_marker: bool) -> std::io::Result<W> {
         if with_end_marker {
-            unsafe { encode_symbol(&mut self.ppmd, SYM_END) };
+            unsafe { encode_symbol(&mut self.ppmd, SYM_END)? };
         }
         self.flush()?;
         Ok(self.into_inner())
-    }
-
-    fn inner_flush(&mut self) {
-        unsafe { range_encoder_flush(&mut self.ppmd) };
-        self.writer.flush();
     }
 }
 
@@ -75,15 +57,14 @@ impl<W: Write> Write for Ppmd8Encoder<W> {
         }
 
         for &byte in buf.iter() {
-            unsafe { encode_symbol(&mut self.ppmd as *mut _, byte as i32) };
+            unsafe { encode_symbol(&mut self.ppmd as *mut _, byte as i32)? };
         }
 
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.inner_flush();
-        Ok(())
+        self.ppmd.flush_range_encoder()
     }
 }
 

@@ -1,32 +1,9 @@
 use super::*;
 
-pub unsafe fn range_encoder_init(p: *mut PPMd8) {
-    (*p).low = 0;
-    (*p).range = 0xFFFFFFFF;
-}
-
-pub unsafe fn range_encoder_flush(p: *mut PPMd8) {
-    let mut i: std::ffi::c_uint = 0;
-    i = 0 as std::ffi::c_int as std::ffi::c_uint;
-    while i < 4 as std::ffi::c_int as std::ffi::c_uint {
-        ((*(*p).stream.output).write).expect("non-null function pointer")(
-            (*p).stream.output,
-            ((*p).low >> 24 as std::ffi::c_int) as u8,
-        );
-        i = i.wrapping_add(1);
-        i;
-        (*p).low <<= 8 as std::ffi::c_int;
-    }
-}
-
-#[inline(always)]
-unsafe fn range_encoder_encode(p: *mut PPMd8, start: u32, size: u32, total: u32) {
-    (*p).range = (*p).range / total;
-    (*p).low = ((*p).low).wrapping_add(start * (*p).range);
-    (*p).range = (*p).range * size;
-}
-
-pub unsafe fn encode_symbol(p: *mut PPMd8, symbol: std::ffi::c_int) {
+pub unsafe fn encode_symbol<W: Write>(
+    p: *mut PPMd8<RangeEncoder<W>>,
+    symbol: std::ffi::c_int,
+) -> std::io::Result<()> {
     let mut charMask: [usize; 32] = [0; 32];
     if (*(*p).min_context).num_stats as std::ffi::c_int != 0 as std::ffi::c_int {
         let mut s: *mut State = ((*p).base).offset((*(*p).min_context).union4.stats as isize)
@@ -34,30 +11,14 @@ pub unsafe fn encode_symbol(p: *mut PPMd8, symbol: std::ffi::c_int) {
         let mut sum: u32 = 0;
         let mut i: std::ffi::c_uint = 0;
         let mut summFreq: u32 = (*(*p).min_context).union2.summ_freq as u32;
-        if summFreq > (*p).range {
-            summFreq = (*p).range;
-        }
+
+        summFreq = (*p).rc.correct_sum_range(summFreq);
+
         if (*s).symbol as std::ffi::c_int == symbol {
-            range_encoder_encode(p, 0 as std::ffi::c_int as u32, (*s).freq as u32, summFreq);
-            while (*p).low ^ ((*p).low).wrapping_add((*p).range)
-                < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int
-                || (*p).range < (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int && {
-                    (*p).range = (0 as std::ffi::c_int as u32).wrapping_sub((*p).low)
-                        & ((1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int)
-                            .wrapping_sub(1 as std::ffi::c_int as u32);
-                    1 as std::ffi::c_int != 0
-                }
-            {
-                ((*(*p).stream.output).write).expect("non-null function pointer")(
-                    (*p).stream.output,
-                    ((*p).low >> 24 as std::ffi::c_int) as u8,
-                );
-                (*p).range <<= 8 as std::ffi::c_int;
-                (*p).low <<= 8 as std::ffi::c_int;
-            }
+            (*p).rc.encode_final(0, (*s).freq as u32, summFreq)?;
             (*p).found_state = s;
             update1_0(p);
-            return;
+            return Ok(());
         }
         (*p).prev_success = 0 as std::ffi::c_int as std::ffi::c_uint;
         sum = (*s).freq as u32;
@@ -65,26 +26,10 @@ pub unsafe fn encode_symbol(p: *mut PPMd8, symbol: std::ffi::c_int) {
         loop {
             s = s.offset(1);
             if (*s).symbol as std::ffi::c_int == symbol {
-                range_encoder_encode(p, sum, (*s).freq as u32, summFreq);
-                while (*p).low ^ ((*p).low).wrapping_add((*p).range)
-                    < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int
-                    || (*p).range < (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int && {
-                        (*p).range = (0 as std::ffi::c_int as u32).wrapping_sub((*p).low)
-                            & ((1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int)
-                                .wrapping_sub(1 as std::ffi::c_int as u32);
-                        1 as std::ffi::c_int != 0
-                    }
-                {
-                    ((*(*p).stream.output).write).expect("non-null function pointer")(
-                        (*p).stream.output,
-                        ((*p).low >> 24 as std::ffi::c_int) as u8,
-                    );
-                    (*p).range <<= 8 as std::ffi::c_int;
-                    (*p).low <<= 8 as std::ffi::c_int;
-                }
+                (*p).rc.encode_final(sum, (*s).freq as u32, summFreq)?;
                 (*p).found_state = s;
                 update1(p);
-                return;
+                return Ok(());
             }
             sum = sum.wrapping_add((*s).freq as u32);
             i = i.wrapping_sub(1);
@@ -92,7 +37,9 @@ pub unsafe fn encode_symbol(p: *mut PPMd8, symbol: std::ffi::c_int) {
                 break;
             }
         }
-        range_encoder_encode(p, sum, summFreq.wrapping_sub(sum), summFreq);
+
+        (*p).rc.encode(sum, summFreq.wrapping_sub(sum), summFreq);
+
         let mut z: usize = 0;
         z = 0 as std::ffi::c_int as usize;
         while z < 256usize.wrapping_div(::core::mem::size_of::<usize>()) {
@@ -156,31 +103,18 @@ pub unsafe fn encode_symbol(p: *mut PPMd8, symbol: std::ffi::c_int) {
         ) as *mut u16;
         let s_0: *mut State = &mut (*(*p).min_context).union2 as *mut Union2 as *mut State;
         let mut pr: u32 = *prob as u32;
-        let bound: u32 = ((*p).range >> 14 as std::ffi::c_int) * pr;
+        let bound: u32 = ((*p).rc.range >> 14 as std::ffi::c_int) * pr;
         pr = pr.wrapping_sub(
             pr.wrapping_add(
                 ((1 as std::ffi::c_int) << 7 as std::ffi::c_int - 2 as std::ffi::c_int) as u32,
             ) >> 7 as std::ffi::c_int,
         );
+
         if (*s_0).symbol as std::ffi::c_int == symbol {
             *prob = pr.wrapping_add(((1 as std::ffi::c_int) << 7 as std::ffi::c_int) as u32) as u16;
-            (*p).range = bound;
-            while (*p).low ^ ((*p).low).wrapping_add((*p).range)
-                < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int
-                || (*p).range < (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int && {
-                    (*p).range = (0 as std::ffi::c_int as u32).wrapping_sub((*p).low)
-                        & ((1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int)
-                            .wrapping_sub(1 as std::ffi::c_int as u32);
-                    1 as std::ffi::c_int != 0
-                }
-            {
-                ((*(*p).stream.output).write).expect("non-null function pointer")(
-                    (*p).stream.output,
-                    ((*p).low >> 24 as std::ffi::c_int) as u8,
-                );
-                (*p).range <<= 8 as std::ffi::c_int;
-                (*p).low <<= 8 as std::ffi::c_int;
-            }
+            (*p).rc.range = bound;
+            (*p).rc.normalize_remote()?;
+
             let freq: std::ffi::c_uint = (*s_0).freq as std::ffi::c_uint;
             let c: *mut Context = ((*p).base).offset(
                 ((*s_0).successor_0 as u32 | ((*s_0).successor_1 as u32) << 16 as std::ffi::c_int)
@@ -202,15 +136,14 @@ pub unsafe fn encode_symbol(p: *mut PPMd8, symbol: std::ffi::c_int) {
             } else {
                 update_model(p);
             }
-            return;
+            return Ok(());
         }
+
         *prob = pr as u16;
         (*p).init_esc = (*p).exp_escape[(pr >> 10 as std::ffi::c_int) as usize] as std::ffi::c_uint;
-        (*p).low = ((*p).low).wrapping_add(bound);
-        (*p).range = ((*p).range
-            & !(((1 as std::ffi::c_int) << 7 as std::ffi::c_int + 7 as std::ffi::c_int) as u32)
-                .wrapping_sub(1 as std::ffi::c_int as u32))
-        .wrapping_sub(bound);
+
+        (*p).rc.encode_bit_1(bound);
+
         let mut z_0: usize = 0;
         z_0 = 0 as std::ffi::c_int as usize;
         while z_0 < 256usize.wrapping_div(::core::mem::size_of::<usize>()) {
@@ -244,29 +177,17 @@ pub unsafe fn encode_symbol(p: *mut PPMd8, symbol: std::ffi::c_int) {
         let mut mc: *mut Context = 0 as *mut Context;
         let mut i_0: std::ffi::c_uint = 0;
         let mut numMasked: std::ffi::c_uint = 0;
-        while (*p).low ^ ((*p).low).wrapping_add((*p).range)
-            < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int
-            || (*p).range < (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int && {
-                (*p).range = (0 as std::ffi::c_int as u32).wrapping_sub((*p).low)
-                    & ((1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int)
-                        .wrapping_sub(1 as std::ffi::c_int as u32);
-                1 as std::ffi::c_int != 0
-            }
-        {
-            ((*(*p).stream.output).write).expect("non-null function pointer")(
-                (*p).stream.output,
-                ((*p).low >> 24 as std::ffi::c_int) as u8,
-            );
-            (*p).range <<= 8 as std::ffi::c_int;
-            (*p).low <<= 8 as std::ffi::c_int;
-        }
+
+        (*p).rc.normalize_remote()?;
+
         mc = (*p).min_context;
         numMasked = (*mc).num_stats as std::ffi::c_uint;
+
         loop {
             (*p).order_fall = ((*p).order_fall).wrapping_add(1);
             (*p).order_fall;
             if (*mc).suffix == 0 {
-                return;
+                return Ok(());
             }
             mc = ((*p).base).offset((*mc).suffix as isize) as *mut std::ffi::c_void as *mut Context;
             if !((*mc).num_stats as std::ffi::c_uint == numMasked) {
@@ -314,46 +235,30 @@ pub unsafe fn encode_symbol(p: *mut PPMd8, symbol: std::ffi::c_int) {
                                 as std::ffi::c_uint
                                 & *(charMask.as_mut_ptr() as *mut u8).offset(sym0_0 as isize)
                                     as std::ffi::c_uint,
-                        ) as u32 as u32;
+                        );
                         sum_0 = (sum_0 as std::ffi::c_uint).wrapping_add(
                             (*s_1.offset(-(1 as std::ffi::c_int) as isize)).freq
                                 as std::ffi::c_uint
                                 & *(charMask.as_mut_ptr() as *mut u8).offset(sym1_0 as isize)
                                     as std::ffi::c_uint,
-                        ) as u32 as u32;
+                        );
                         num2 = num2.wrapping_sub(1);
                         if !(num2 != 0) {
                             break;
                         }
                     }
                 }
-                if sum_0 > (*p).range {
-                    sum_0 = (*p).range;
-                }
-                range_encoder_encode(p, low, freq_0, sum_0);
-                while (*p).low ^ ((*p).low).wrapping_add((*p).range)
-                    < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int
-                    || (*p).range < (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int && {
-                        (*p).range = (0 as std::ffi::c_int as u32).wrapping_sub((*p).low)
-                            & ((1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int)
-                                .wrapping_sub(1 as std::ffi::c_int as u32);
-                        1 as std::ffi::c_int != 0
-                    }
-                {
-                    ((*(*p).stream.output).write).expect("non-null function pointer")(
-                        (*p).stream.output,
-                        ((*p).low >> 24 as std::ffi::c_int) as u8,
-                    );
-                    (*p).range <<= 8 as std::ffi::c_int;
-                    (*p).low <<= 8 as std::ffi::c_int;
-                }
+
+                sum_0 = (*p).rc.correct_sum_range(sum_0);
+
+                (*p).rc.encode_final(low, freq_0, sum_0)?;
                 update2(p);
-                return;
+                return Ok(());
             }
             sum_0 = (sum_0 as std::ffi::c_uint).wrapping_add(
                 (*s_1).freq as std::ffi::c_uint
                     & *(charMask.as_mut_ptr() as *mut u8).offset(cur as isize) as std::ffi::c_uint,
-            ) as u32 as u32;
+            );
             s_1 = s_1.offset(1);
             s_1;
             i_0 = i_0.wrapping_sub(1);
@@ -361,12 +266,14 @@ pub unsafe fn encode_symbol(p: *mut PPMd8, symbol: std::ffi::c_int) {
                 break;
             }
         }
+
         let mut total: u32 = sum_0.wrapping_add(escFreq);
         (*see).summ = ((*see).summ as u32).wrapping_add(total) as u16;
-        if total > (*p).range {
-            total = (*p).range;
-        }
-        range_encoder_encode(p, sum_0, total.wrapping_sub(sum_0), total);
+
+        total = (*p).rc.correct_sum_range(total);
+
+        (*p).rc.encode(sum_0, total.wrapping_sub(sum_0), total);
+
         let mut s2_0: *const State = ((*p).base).offset((*(*p).min_context).union4.stats as isize)
             as *mut std::ffi::c_void as *mut State;
         s_1 = s_1.offset(-1);

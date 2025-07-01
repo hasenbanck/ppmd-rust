@@ -29,8 +29,6 @@
 
 mod internal;
 
-mod byte_reader;
-mod byte_writer;
 mod decoder_7;
 mod decoder_8;
 mod encoder_7;
