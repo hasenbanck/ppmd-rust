@@ -1,60 +1,57 @@
 use std::io::Write;
 
-use super::{byte_writer::ByteWriter, memory::Memory};
-use crate::{Error, RestoreMethod};
-use ppmd_sys::native::ppmd8::{CPpmd8, Ppmd8_Alloc, Ppmd8_Construct, Ppmd8_Init};
-use ppmd_sys::native::ppmd8enc::{Ppmd8_EncodeSymbol, Ppmd8_Flush_RangeEnc};
-use ppmd_sys::{PPMD8_MAX_ORDER, PPMD8_MIN_ORDER};
+use super::internal::ppmd8::{Ppmd8, RangeEncoder};
+use crate::{
+    Error, RestoreMethod, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER,
+    SYM_END,
+};
 
-/// A encoder to encode PPMd8 (PPMdI) compressed data.
+/// A encoder to compress data using PPMd8 (PPMdI rev.1).
 pub struct Ppmd8Encoder<W: Write> {
-    ppmd: CPpmd8,
-    writer: ByteWriter<W>,
-    _memory: Memory,
+    ppmd: Ppmd8<RangeEncoder<W>>,
 }
 
 impl<W: Write> Ppmd8Encoder<W> {
-    /// Creates a new [`Ppmd8Encoder`].
+    /// Creates a new [`Ppmd8Encoder`] which provides a writer over the compressed data.
+    ///
+    /// The given `order` must be between [`PPMD8_MIN_ORDER`] and [`PPMD8_MAX_ORDER`] (inclusive).
+    /// The given `mem_size` must be between [`PPMD8_MIN_MEM_SIZE`] and [`PPMD8_MAX_MEM_SIZE`] (inclusive).
     pub fn new(
         writer: W,
         order: u32,
         mem_size: u32,
         restore_method: RestoreMethod,
     ) -> crate::Result<Self> {
-        if !(PPMD8_MIN_ORDER..=PPMD8_MAX_ORDER).contains(&order) {
+        if !(PPMD8_MIN_ORDER..=PPMD8_MAX_ORDER).contains(&order)
+            || !(PPMD8_MIN_MEM_SIZE..=PPMD8_MAX_MEM_SIZE).contains(&mem_size)
+        {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<CPpmd8>() };
-        unsafe { Ppmd8_Construct(&mut ppmd) };
+        let ppmd = Ppmd8::new_encoder(writer, mem_size, order, restore_method)?;
 
-        let mut memory = Memory::new(mem_size);
-
-        let success = unsafe { Ppmd8_Alloc(&mut ppmd, mem_size, memory.allocation()) };
-
-        if success == 0 {
-            return Err(Error::MemoryAllocation);
-        }
-
-        let mut writer = ByteWriter::new(writer);
-        ppmd.Stream.Out = writer.byte_out_ptr();
-
-        // #define Ppmd8_Init_RangeEnc(p) { (p)->Low = 0; (p)->Range = 0xFFFFFFFF; }
-        ppmd.Low = 0;
-        ppmd.Range = 0xFFFFFFFF;
-
-        unsafe { Ppmd8_Init(&mut ppmd, order, restore_method as _) };
-
-        Ok(Self {
-            ppmd,
-            writer,
-            _memory: memory,
-        })
+        Ok(Self { ppmd })
     }
 
-    fn inner_flush(&mut self) {
-        unsafe { Ppmd8_Flush_RangeEnc(&mut self.ppmd) };
-        self.writer.flush();
+    /// Returns the inner writer.
+    pub fn into_inner(self) -> W {
+        self.ppmd.into_inner()
+    }
+
+    /// Finishes the encoding process.
+    ///
+    /// Adds an end marker to the data if `with_end_marker` is set to `true`.
+    pub fn finish(mut self, with_end_marker: bool) -> Result<W, std::io::Error> {
+        if with_end_marker {
+            self.ppmd.encode_symbol(SYM_END)?;
+        }
+        self.flush()?;
+        Ok(self.into_inner())
+    }
+
+    fn inner_flush(&mut self) -> Result<(), std::io::Error> {
+        self.ppmd.flush_range_encoder()?;
+        Ok(())
     }
 }
 
@@ -64,15 +61,15 @@ impl<W: Write> Write for Ppmd8Encoder<W> {
             return Ok(0);
         }
 
-        buf.iter()
-            .for_each(|byte| unsafe { Ppmd8_EncodeSymbol(&mut self.ppmd as *mut _, *byte as _) });
+        for &byte in buf {
+            self.ppmd.encode_symbol(byte as i32)?;
+        }
 
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.inner_flush();
-        Ok(())
+        self.inner_flush()
     }
 }
 
@@ -80,31 +77,22 @@ impl<W: Write> Write for Ppmd8Encoder<W> {
 mod test {
     use std::io::{Read, Write};
 
-    use super::Ppmd8Encoder;
-    use crate::old::Ppmd8Decoder;
-    use crate::RestoreMethod;
+    use super::{super::decoder_8::Ppmd8Decoder, Ppmd8Encoder, RestoreMethod};
 
     const ORDER: u32 = 8;
     const MEM_SIZE: u32 = 262144;
     const RESTORE_METHOD: RestoreMethod = RestoreMethod::Restart;
 
     #[test]
-    fn ppmd8encoder_init_drop() {
-        let writer = Vec::new();
-        let encoder = Ppmd8Encoder::new(writer, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
-        assert!(!encoder.ppmd.Base.is_null());
-    }
-
-    #[test]
-    fn ppmd8encoder_encode_decode() {
-        let test_data = "Lorem ipsum dolor sit amet. ";
+    fn ppmd8encoder_without_end_marker() {
+        let test_data = include_str!("../../tests/fixtures/text/apache2.txt");
 
         let mut writer = Vec::new();
         {
             let mut encoder =
                 Ppmd8Encoder::new(&mut writer, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
             encoder.write_all(test_data.as_bytes()).unwrap();
-            encoder.flush().unwrap();
+            encoder.finish(false).unwrap();
         }
 
         let mut decoder =
@@ -113,10 +101,29 @@ mod test {
         let mut decoded = vec![0; test_data.len()];
         decoder.read_exact(&mut decoded).unwrap();
 
-        assert_eq!(decoded.as_slice(), test_data.as_bytes());
+        let decoded_data = String::from_utf8(decoded).unwrap();
+        assert_eq!(decoded_data, test_data);
+    }
+
+    #[test]
+    fn ppmd8encoder_with_end_marker() {
+        let test_data = include_str!("../../tests/fixtures/text/apache2.txt");
+
+        let mut writer = Vec::new();
+        {
+            let mut encoder =
+                Ppmd8Encoder::new(&mut writer, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
+            encoder.write_all(test_data.as_bytes()).unwrap();
+            encoder.finish(true).unwrap();
+        }
+
+        let mut decoder =
+            Ppmd8Decoder::new(writer.as_slice(), ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
+
+        let mut decoded = Vec::new();
+        decoder.read_to_end(&mut decoded).unwrap();
 
         let decoded_data = String::from_utf8(decoded).unwrap();
-
         assert_eq!(decoded_data, test_data);
     }
 }

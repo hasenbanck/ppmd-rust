@@ -1,22 +1,20 @@
 use std::io::Write;
 
-use super::{byte_writer::ByteWriter, memory::Memory};
-use crate::Error;
-use ppmd_sys::native::ppmd7::{CPpmd7, Ppmd7_Alloc, Ppmd7_Construct, Ppmd7_Init};
-use ppmd_sys::native::ppmd7enc::{
-    Ppmd7z_EncodeSymbols, Ppmd7z_Flush_RangeEnc, Ppmd7z_Init_RangeEnc,
+use super::internal::ppmd7::{Ppmd7, RangeEncoder};
+use crate::{
+    Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
-use ppmd_sys::{PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER};
 
-/// An encoder to encode data using PPMd7 (PPMdH) with the 7z range coder.
+/// An encoder to compress data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Encoder<W: Write> {
-    ppmd: CPpmd7,
-    writer: ByteWriter<W>,
-    _memory: Memory,
+    ppmd: Ppmd7<RangeEncoder<W>>,
 }
 
 impl<W: Write> Ppmd7Encoder<W> {
-    /// Creates a new [`Ppmd7Encoder`].
+    /// Creates a new [`Ppmd7Encoder`] which provides a writer over the compressed data.
+    ///
+    /// The given `order` must be between [`PPMD7_MIN_ORDER`] and [`PPMD7_MAX_ORDER`] (inclusive).
+    /// The given `mem_size` must be between [`PPMD7_MIN_MEM_SIZE`] and [`PPMD7_MAX_MEM_SIZE`] (inclusive).
     pub fn new(writer: W, order: u32, mem_size: u32) -> crate::Result<Self> {
         if !(PPMD7_MIN_ORDER..=PPMD7_MAX_ORDER).contains(&order)
             || !(PPMD7_MIN_MEM_SIZE..=PPMD7_MAX_MEM_SIZE).contains(&mem_size)
@@ -24,34 +22,29 @@ impl<W: Write> Ppmd7Encoder<W> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<CPpmd7>() };
-        unsafe { Ppmd7_Construct(&mut ppmd) };
+        let ppmd = Ppmd7::new_encoder(writer, order, mem_size)?;
 
-        let mut memory = Memory::new(mem_size);
-
-        let success = unsafe { Ppmd7_Alloc(&mut ppmd, mem_size, memory.allocation()) };
-
-        if success == 0 {
-            return Err(Error::MemoryAllocation);
-        }
-
-        let mut writer = ByteWriter::new(writer);
-        let range_encoder = unsafe { &mut ppmd.rc.enc };
-        range_encoder.Stream = writer.byte_out_ptr();
-
-        unsafe { Ppmd7z_Init_RangeEnc(&mut ppmd) };
-        unsafe { Ppmd7_Init(&mut ppmd, order) };
-
-        Ok(Self {
-            ppmd,
-            writer,
-            _memory: memory,
-        })
+        Ok(Self { ppmd })
     }
 
-    fn inner_flush(&mut self) {
-        unsafe { Ppmd7z_Flush_RangeEnc(&mut self.ppmd) };
-        self.writer.flush();
+    /// Returns the inner writer.
+    pub fn into_inner(self) -> W {
+        self.ppmd.into_inner()
+    }
+
+    /// Finishes the encoding process.
+    ///
+    /// Adds an end marker to the data if `with_end_marker` is set to `true`.
+    pub fn finish(mut self, with_end_marker: bool) -> Result<W, std::io::Error> {
+        if with_end_marker {
+            self.ppmd.encode_symbol(SYM_END)?;
+        }
+        self.flush()?;
+        Ok(self.into_inner())
+    }
+
+    fn inner_flush(&mut self) -> Result<(), std::io::Error> {
+        self.ppmd.flush_range_encoder()
     }
 }
 
@@ -61,15 +54,15 @@ impl<W: Write> Write for Ppmd7Encoder<W> {
             return Ok(0);
         }
 
-        let pointer_range = buf.as_ptr_range();
-        unsafe { Ppmd7z_EncodeSymbols(&mut self.ppmd, pointer_range.start, pointer_range.end) };
+        for &byte in buf.iter() {
+            self.ppmd.encode_symbol(byte as i32)?;
+        }
 
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.inner_flush();
-        Ok(())
+        self.inner_flush()
     }
 }
 
@@ -77,39 +70,48 @@ impl<W: Write> Write for Ppmd7Encoder<W> {
 mod test {
     use std::io::{Read, Write};
 
-    use super::Ppmd7Encoder;
-    use crate::old::Ppmd7Decoder;
+    use super::{super::decoder_7::Ppmd7Decoder, Ppmd7Encoder};
 
     const ORDER: u32 = 8;
     const MEM_SIZE: u32 = 262144;
 
     #[test]
-    fn ppmd7encoder_init_drop() {
-        let writer = Vec::new();
-        let encoder = Ppmd7Encoder::new(writer, ORDER, MEM_SIZE).unwrap();
-        assert!(!encoder.ppmd.Base.is_null());
-    }
+    fn ppmd7encoder_without_end_marker() {
+        let test_data = include_str!("../../tests/fixtures/text/apache2.txt");
 
-    #[test]
-    fn ppmd7encoder_encode_decode() {
-        let test_data = "Lorem ipsum dolor sit amet. ";
-
-        let mut writer = Vec::new();
+        let mut data = Vec::new();
         {
-            let mut encoder = Ppmd7Encoder::new(&mut writer, ORDER, MEM_SIZE).unwrap();
+            let mut encoder = Ppmd7Encoder::new(&mut data, ORDER, MEM_SIZE).unwrap();
             encoder.write_all(test_data.as_bytes()).unwrap();
-            encoder.flush().unwrap();
+            encoder.finish(false).unwrap();
         }
 
-        let mut decoder = Ppmd7Decoder::new(writer.as_slice(), ORDER, MEM_SIZE).unwrap();
+        let mut decoder = Ppmd7Decoder::new(data.as_slice(), ORDER, MEM_SIZE).unwrap();
 
         let mut decoded = vec![0; test_data.len()];
         decoder.read_exact(&mut decoded).unwrap();
 
-        assert_eq!(decoded.as_slice(), test_data.as_bytes());
+        let decoded_data = String::from_utf8(decoded).unwrap();
+        assert_eq!(decoded_data, test_data);
+    }
+
+    #[test]
+    fn ppmd7encoder_with_end_marker() {
+        let test_data = include_str!("../../tests/fixtures/text/apache2.txt");
+
+        let mut data = Vec::new();
+        {
+            let mut encoder = Ppmd7Encoder::new(&mut data, ORDER, MEM_SIZE).unwrap();
+            encoder.write_all(test_data.as_bytes()).unwrap();
+            encoder.finish(true).unwrap();
+        }
+
+        let mut decoder = Ppmd7Decoder::new(data.as_slice(), ORDER, MEM_SIZE).unwrap();
+
+        let mut decoded = Vec::new();
+        decoder.read_to_end(&mut decoded).unwrap();
 
         let decoded_data = String::from_utf8(decoded).unwrap();
-
         assert_eq!(decoded_data, test_data);
     }
 }
