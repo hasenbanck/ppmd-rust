@@ -3,14 +3,14 @@ use std::io::Read;
 use super::internal::{Byte, IByteInPtr, IByteIn_};
 
 pub(crate) struct ByteReader<R: Read> {
-    inner: Box<ByteReaderInner<R>>,
+    pub(crate) inner: Box<ByteReaderInner<R>>,
 }
 
 #[repr(C)]
-struct ByteReaderInner<R> {
+pub(crate) struct ByteReaderInner<R> {
     byte_in: IByteIn_,
     buffer: Vec<u8>,
-    reader: R,
+    pub(crate) reader: R,
     pos: usize,
     end: usize,
     eof: bool,

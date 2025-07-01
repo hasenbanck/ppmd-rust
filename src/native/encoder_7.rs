@@ -1,25 +1,31 @@
-use std::io::Write;
-
 use crate::{
     native::{
-        internal::ppmd7::{CPpmd7, Ppmd7_Alloc, Ppmd7_Construct, Ppmd7_Init},
-        internal::ppmd7enc::{Ppmd7z_EncodeSymbols, Ppmd7z_Flush_RangeEnc, Ppmd7z_Init_RangeEnc},
+        internal::ppmd7::{CPpmd7, Ppmd7_Alloc, Ppmd7_Construct, Ppmd7_Free, Ppmd7_Init},
+        internal::ppmd7enc::{
+            Ppmd7z_EncodeSymbol, Ppmd7z_EncodeSymbols, Ppmd7z_Flush_RangeEnc, Ppmd7z_Init_RangeEnc,
+        },
     },
-    PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER,
+    PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
+use std::io::Write;
+use std::mem::ManuallyDrop;
 
 use super::{byte_writer::ByteWriter, memory::Memory};
+
 use crate::Error;
 
-/// An encoder to encode data using PPMd7 (PPMdH) with the 7z range coder.
+/// An encoder to compress data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Encoder<W: Write> {
     ppmd: CPpmd7,
     writer: ByteWriter<W>,
-    _memory: Memory,
+    memory: Memory,
 }
 
 impl<W: Write> Ppmd7Encoder<W> {
-    /// Creates a new [`Ppmd7Encoder`].
+    /// Creates a new [`Ppmd7Encoder`] which provides a writer over the compressed data.
+    ///
+    /// The given `order` must be between [`PPMD7_MIN_ORDER`] and [`PPMD7_MAX_ORDER`] (inclusive).
+    /// The given `mem_size` must be between [`PPMD7_MIN_MEM_SIZE`] and [`PPMD7_MAX_MEM_SIZE`] (inclusive).
     pub fn new(writer: W, order: u32, mem_size: u32) -> crate::Result<Self> {
         if !(PPMD7_MIN_ORDER..=PPMD7_MAX_ORDER).contains(&order)
             || !(PPMD7_MIN_MEM_SIZE..=PPMD7_MAX_MEM_SIZE).contains(&mem_size)
@@ -48,8 +54,34 @@ impl<W: Write> Ppmd7Encoder<W> {
         Ok(Self {
             ppmd,
             writer,
-            _memory: memory,
+            memory,
         })
+    }
+
+    /// Returns the inner writer.
+    pub fn into_inner(self) -> W {
+        let mut manual_drop_self = ManuallyDrop::new(self);
+        unsafe {
+            Ppmd7_Free(
+                &mut manual_drop_self.ppmd,
+                manual_drop_self.memory.allocation(),
+            )
+        }
+        let writer = unsafe { std::ptr::read(&manual_drop_self.writer) };
+        writer.inner.writer
+    }
+
+    /// Finishes the encoding process.
+    ///
+    /// Adds an end marker to the data if `with_end_marker` is set to `true`.
+    pub fn finish(mut self, with_end_marker: bool) -> Result<W, std::io::Error> {
+        unsafe {
+            if with_end_marker {
+                Ppmd7z_EncodeSymbol(&mut self.ppmd, SYM_END);
+            }
+            self.flush()?;
+            Ok(self.into_inner())
+        }
     }
 
     fn inner_flush(&mut self) {

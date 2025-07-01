@@ -61,7 +61,7 @@ pub unsafe fn Ppmd7z_Flush_RangeEnc(mut p: *mut CPpmd7) {
 }
 
 #[inline(always)]
-unsafe fn Ppmd7z_EncodeSymbol(mut p: *mut CPpmd7, mut symbol: std::ffi::c_int) {
+pub unsafe fn Ppmd7z_EncodeSymbol(mut p: *mut CPpmd7, mut symbol: std::ffi::c_int) {
     let mut charMask: [size_t; 32] = [0; 32];
     if (*(*p).MinContext).NumStats as std::ffi::c_int != 1 as std::ffi::c_int {
         let mut s: *mut CPpmd_State = ((*p).Base).offset((*(*p).MinContext).Union4.Stats as isize)
