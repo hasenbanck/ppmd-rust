@@ -1,7 +1,7 @@
 use crate::{
     native::{
-        internal::ppmd8::{CPpmd8, Ppmd8_Alloc, Ppmd8_Construct, Ppmd8_Free, Ppmd8_Init},
-        internal::ppmd8enc::{Ppmd8_EncodeSymbol, Ppmd8_Flush_RangeEnc},
+        internal::ppmd8::{alloc, construct, free, init, Ppmd8},
+        internal::ppmd8enc::{encode_symbol, range_encoder_flush},
     },
     PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER, SYM_END,
 };
@@ -16,7 +16,7 @@ use crate::{Error, RestoreMethod};
 
 /// A encoder to compress data using PPMd8 (PPMdI rev.1).
 pub struct Ppmd8Encoder<W: Write> {
-    ppmd: CPpmd8,
+    ppmd: Ppmd8,
     writer: ByteWriter<W>,
     memory: Memory,
 }
@@ -38,25 +38,25 @@ impl<W: Write> Ppmd8Encoder<W> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<CPpmd8>() };
-        unsafe { Ppmd8_Construct(&mut ppmd) };
+        let mut ppmd = unsafe { std::mem::zeroed::<Ppmd8>() };
+        unsafe { construct(&mut ppmd) };
 
         let mut memory = Memory::new(mem_size);
 
-        let success = unsafe { Ppmd8_Alloc(&mut ppmd, mem_size, memory.allocation()) };
+        let success = unsafe { alloc(&mut ppmd, mem_size, memory.allocation()) };
 
         if success == 0 {
             return Err(Error::MemoryAllocation);
         }
 
         let mut writer = ByteWriter::new(writer);
-        ppmd.Stream.Out = writer.byte_out_ptr();
+        ppmd.stream.output = writer.byte_out_ptr();
 
-        // #define Ppmd8_Init_RangeEnc(p) { (p)->Low = 0; (p)->Range = 0xFFFFFFFF; }
-        ppmd.Low = 0;
-        ppmd.Range = 0xFFFFFFFF;
+        // #define Init_RangeEnc(p) { (p)->Low = 0; (p)->Range = 0xFFFFFFFF; }
+        ppmd.low = 0;
+        ppmd.range = 0xFFFFFFFF;
 
-        unsafe { Ppmd8_Init(&mut ppmd, order, restore_method as _) };
+        unsafe { init(&mut ppmd, order, restore_method as _) };
 
         Ok(Self {
             ppmd,
@@ -69,7 +69,7 @@ impl<W: Write> Ppmd8Encoder<W> {
     pub fn into_inner(self) -> W {
         let mut manual_drop_self = ManuallyDrop::new(self);
         unsafe {
-            Ppmd8_Free(
+            free(
                 &mut manual_drop_self.ppmd,
                 manual_drop_self.memory.allocation(),
             )
@@ -83,14 +83,14 @@ impl<W: Write> Ppmd8Encoder<W> {
     /// Adds an end marker to the data if `with_end_marker` is set to `true`.
     pub fn finish(mut self, with_end_marker: bool) -> Result<W, std::io::Error> {
         if with_end_marker {
-            unsafe { Ppmd8_EncodeSymbol(&mut self.ppmd, SYM_END) };
+            unsafe { encode_symbol(&mut self.ppmd, SYM_END) };
         }
         self.flush()?;
         Ok(self.into_inner())
     }
 
     fn inner_flush(&mut self) {
-        unsafe { Ppmd8_Flush_RangeEnc(&mut self.ppmd) };
+        unsafe { range_encoder_flush(&mut self.ppmd) };
         self.writer.flush();
     }
 }
@@ -101,8 +101,9 @@ impl<W: Write> Write for Ppmd8Encoder<W> {
             return Ok(0);
         }
 
-        buf.iter()
-            .for_each(|byte| unsafe { Ppmd8_EncodeSymbol(&mut self.ppmd as *mut _, *byte as _) });
+        for &byte in buf.iter() {
+            unsafe { encode_symbol(&mut self.ppmd as *mut _, byte as i32) };
+        }
 
         Ok(buf.len())
     }
@@ -128,7 +129,7 @@ mod test {
     fn ppmd8encoder_init_drop() {
         let writer = Vec::new();
         let encoder = Ppmd8Encoder::new(writer, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
-        assert!(!encoder.ppmd.Base.is_null());
+        assert!(!encoder.ppmd.base.is_null());
     }
 
     #[test]

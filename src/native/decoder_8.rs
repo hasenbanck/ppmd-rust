@@ -1,7 +1,7 @@
 use crate::{
     native::{
-        internal::ppmd8::{CPpmd8, Ppmd8_Alloc, Ppmd8_Construct, Ppmd8_Free, Ppmd8_Init},
-        internal::ppmd8dec::{Ppmd8_DecodeSymbol, Ppmd8_Init_RangeDec},
+        internal::ppmd8::{alloc, construct, free, init, Ppmd8},
+        internal::ppmd8dec::{decode_symbol, range_decoder_init},
     },
     PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER, SYM_END,
 };
@@ -14,7 +14,7 @@ use crate::{Error, RestoreMethod};
 
 /// A decoder to decompress data using PPMd8 (PPMdI rev.1).
 pub struct Ppmd8Decoder<R: Read> {
-    ppmd: CPpmd8,
+    ppmd: Ppmd8,
     reader: ByteReader<R>,
     memory: Memory,
     finished: bool,
@@ -37,27 +37,27 @@ impl<R: Read> Ppmd8Decoder<R> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<CPpmd8>() };
-        unsafe { Ppmd8_Construct(&mut ppmd) };
+        let mut ppmd = unsafe { std::mem::zeroed::<Ppmd8>() };
+        unsafe { construct(&mut ppmd) };
 
         let mut memory = Memory::new(mem_size);
 
-        let success = unsafe { Ppmd8_Alloc(&mut ppmd, mem_size, memory.allocation()) };
+        let success = unsafe { alloc(&mut ppmd, mem_size, memory.allocation()) };
 
         if success == 0 {
             return Err(Error::MemoryAllocation);
         }
 
         let mut reader = ByteReader::new(reader);
-        ppmd.Stream.In = reader.byte_in_ptr();
+        ppmd.stream.input = reader.byte_in_ptr();
 
-        let success = unsafe { Ppmd8_Init_RangeDec(&mut ppmd) };
+        let success = unsafe { range_decoder_init(&mut ppmd) };
 
         if success == 0 {
             return Err(Error::RangeDecoderInitialization);
         }
 
-        unsafe { Ppmd8_Init(&mut ppmd, order, restore_method as _) };
+        unsafe { init(&mut ppmd, order, restore_method as _) };
 
         Ok(Self {
             ppmd,
@@ -71,7 +71,7 @@ impl<R: Read> Ppmd8Decoder<R> {
     pub fn into_inner(self) -> R {
         let mut manual_drop_self = ManuallyDrop::new(self);
         unsafe {
-            Ppmd8_Free(
+            free(
                 &mut manual_drop_self.ppmd,
                 manual_drop_self.memory.allocation(),
             )
@@ -83,7 +83,7 @@ impl<R: Read> Ppmd8Decoder<R> {
 
 impl<R: Read> Drop for Ppmd8Decoder<R> {
     fn drop(&mut self) {
-        unsafe { Ppmd8_Free(&mut self.ppmd, self.memory.allocation()) }
+        unsafe { free(&mut self.ppmd, self.memory.allocation()) }
     }
 }
 
@@ -102,7 +102,7 @@ impl<R: Read> Read for Ppmd8Decoder<R> {
 
         unsafe {
             for byte in buf.iter_mut() {
-                sym = Ppmd8_DecodeSymbol(&mut self.ppmd);
+                sym = decode_symbol(&mut self.ppmd);
 
                 if sym < 0 {
                     break;
@@ -113,7 +113,7 @@ impl<R: Read> Read for Ppmd8Decoder<R> {
             }
         }
 
-        let code = self.ppmd.Code;
+        let code = self.ppmd.code;
 
         if sym >= 0 {
             return Ok(decoded);
@@ -145,6 +145,6 @@ mod test {
     fn ppmd8zdecoder_init_drop() {
         let reader: &[u8] = &[];
         let decoder = Ppmd8Decoder::new(reader, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
-        assert!(!decoder.ppmd.Base.is_null());
+        assert!(!decoder.ppmd.base.is_null());
     }
 }
