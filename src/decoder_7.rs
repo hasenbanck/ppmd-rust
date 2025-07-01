@@ -1,10 +1,10 @@
+use std::{io::Read, mem::ManuallyDrop};
+
 use crate::{
     byte_reader::ByteReader,
     internal::ppmd7::{decode_symbol, range_decoder_init, PPMd7, RangeCoder, RangeDecoder},
     Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
-use std::io::Read;
-use std::mem::ManuallyDrop;
 
 /// A decoder to decompress data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Decoder<R: Read> {

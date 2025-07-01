@@ -1,5 +1,10 @@
 use super::*;
 
+pub unsafe fn range_encoder_init(p: *mut Ppmd8) {
+    (*p).low = 0;
+    (*p).range = 0xFFFFFFFF;
+}
+
 pub unsafe fn range_encoder_flush(p: *mut Ppmd8) {
     let mut i: std::ffi::c_uint = 0;
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
