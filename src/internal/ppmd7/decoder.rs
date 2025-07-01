@@ -1,64 +1,25 @@
 use super::*;
+use crate::{SYM_END, SYM_ERROR};
 
-pub unsafe fn range_decoder_init(p: *mut RangeDecoder) -> i32 {
-    let mut i: std::ffi::c_uint = 0;
-    (*p).code = 0 as std::ffi::c_int as u32;
-    (*p).range = 0xFFFFFFFF as std::ffi::c_uint;
-    if ((*(*p).stream).read).expect("non-null function pointer")((*p).stream) as std::ffi::c_int
-        != 0 as std::ffi::c_int
-    {
-        return 0 as std::ffi::c_int;
-    }
-    i = 0 as std::ffi::c_int as std::ffi::c_uint;
-    while i < 4 as std::ffi::c_int as std::ffi::c_uint {
-        (*p).code = (*p).code << 8 as std::ffi::c_int
-            | ((*(*p).stream).read).expect("non-null function pointer")((*p).stream) as u32;
-        i = i.wrapping_add(1);
-        i;
-    }
-    return ((*p).code < 0xFFFFFFFF as std::ffi::c_uint) as std::ffi::c_int;
-}
-
-#[inline(always)]
-unsafe fn range_decoder_decode(p: *mut PPMd7, start: u32, size: u32) {
-    (*p).rc.dec.code = ((*p).rc.dec.code).wrapping_sub(start * (*p).rc.dec.range);
-    (*p).rc.dec.range = (*p).rc.dec.range * size;
-}
-
-pub unsafe fn decode_symbol(p: *mut PPMd7) -> std::ffi::c_int {
+pub(crate) unsafe fn decode_symbol<R: Read>(
+    p: *mut PPMd7<RangeDecoder<R>>,
+) -> std::io::Result<std::ffi::c_int> {
     let mut charMask: [usize; 32] = [0; 32];
     if (*(*p).min_context).num_stats as std::ffi::c_int != 1 as std::ffi::c_int {
         let mut s: *mut State = ((*p).base).offset((*(*p).min_context).union4.stats as isize)
             as *mut std::ffi::c_void as *mut State;
         let mut i: std::ffi::c_uint = 0;
-        let mut count: u32 = 0;
         let mut hiCnt: u32 = 0;
         let summFreq: u32 = (*(*p).min_context).union2.summ_freq as u32;
-        (*p).rc.dec.range = (*p).rc.dec.range / summFreq;
-        count = (*p).rc.dec.code / (*p).rc.dec.range;
+        let mut count = (*p).rc.get_threshold(summFreq);
         hiCnt = count;
         count = count.wrapping_sub((*s).freq as u32);
         if (count as i32) < 0 as std::ffi::c_int {
-            let mut sym: u8 = 0;
-            range_decoder_decode(p, 0 as std::ffi::c_int as u32, (*s).freq as u32);
-            if (*p).rc.dec.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                (*p).rc.dec.code = (*p).rc.dec.code << 8 as std::ffi::c_int
-                    | ((*(*p).rc.dec.stream).read).expect("non-null function pointer")(
-                        (*p).rc.dec.stream,
-                    ) as u32;
-                (*p).rc.dec.range <<= 8 as std::ffi::c_int;
-                if (*p).rc.dec.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                    (*p).rc.dec.code = (*p).rc.dec.code << 8 as std::ffi::c_int
-                        | ((*(*p).rc.dec.stream).read).expect("non-null function pointer")(
-                            (*p).rc.dec.stream,
-                        ) as u32;
-                    (*p).rc.dec.range <<= 8 as std::ffi::c_int;
-                }
-            }
+            (*p).rc.decode_final(0, (*s).freq as u32)?;
             (*p).found_state = s;
-            sym = (*s).symbol;
-            Update1_0(p);
-            return sym as std::ffi::c_int;
+            let sym = (*s).symbol;
+            update1_0(p);
+            return Ok(sym as std::ffi::c_int);
         }
         (*p).prev_success = 0 as std::ffi::c_int as std::ffi::c_uint;
         i = ((*(*p).min_context).num_stats as std::ffi::c_uint)
@@ -68,44 +29,32 @@ pub unsafe fn decode_symbol(p: *mut PPMd7) -> std::ffi::c_int {
             count = count.wrapping_sub((*s).freq as u32);
             if (count as i32) < 0 as std::ffi::c_int {
                 let mut sym_0: u8 = 0;
-                range_decoder_decode(
-                    p,
-                    hiCnt.wrapping_sub(count).wrapping_sub((*s).freq as u32),
-                    (*s).freq as u32,
-                );
-                if (*p).rc.dec.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                    (*p).rc.dec.code = (*p).rc.dec.code << 8 as std::ffi::c_int
-                        | ((*(*p).rc.dec.stream).read).expect("non-null function pointer")(
-                            (*p).rc.dec.stream,
-                        ) as u32;
-                    (*p).rc.dec.range <<= 8 as std::ffi::c_int;
-                    if (*p).rc.dec.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                        (*p).rc.dec.code = (*p).rc.dec.code << 8 as std::ffi::c_int
-                            | ((*(*p).rc.dec.stream).read).expect("non-null function pointer")(
-                                (*p).rc.dec.stream,
-                            ) as u32;
-                        (*p).rc.dec.range <<= 8 as std::ffi::c_int;
-                    }
-                }
+                let freq = (*s).freq as u32;
+                (*p).rc
+                    .decode_final(hiCnt.wrapping_sub(count).wrapping_sub(freq), freq)?;
                 (*p).found_state = s;
                 sym_0 = (*s).symbol;
                 update1(p);
-                return sym_0 as std::ffi::c_int;
+                return Ok(sym_0 as std::ffi::c_int);
             }
             i = i.wrapping_sub(1);
             if !(i != 0) {
                 break;
             }
         }
+
         if hiCnt >= summFreq {
-            return -(2 as std::ffi::c_int);
+            return Ok(SYM_ERROR);
         }
+
         hiCnt = hiCnt.wrapping_sub(count);
-        range_decoder_decode(p, hiCnt, summFreq.wrapping_sub(hiCnt));
+        (*p).rc.decode(hiCnt, summFreq.wrapping_sub(hiCnt));
+
         (*p).hi_bits_flag = ((*(*p).found_state).symbol as std::ffi::c_uint)
             .wrapping_add(0xC0 as std::ffi::c_int as std::ffi::c_uint)
             >> 8 as std::ffi::c_int - 3 as std::ffi::c_int
             & ((1 as std::ffi::c_int) << 3 as std::ffi::c_int) as std::ffi::c_uint;
+
         let mut z: usize = 0;
         z = 0 as std::ffi::c_int as usize;
         while z
@@ -183,23 +132,18 @@ pub unsafe fn decode_symbol(p: *mut PPMd7) -> std::ffi::c_int {
                 .wrapping_add((*p).hi_bits_flag) as isize,
         ) as *mut u16;
         let mut pr: u32 = *prob as u32;
-        let size0: u32 = ((*p).rc.dec.range >> 14 as std::ffi::c_int) * pr;
+        let size0: u32 = ((*p).rc.range >> 14 as std::ffi::c_int) * pr;
         pr = pr.wrapping_sub(
             pr.wrapping_add(
                 ((1 as std::ffi::c_int) << 7 as std::ffi::c_int - 2 as std::ffi::c_int) as u32,
             ) >> 7 as std::ffi::c_int,
         );
-        if (*p).rc.dec.code < size0 {
+        if (*p).rc.code < size0 {
             let mut sym_1: u8 = 0;
             *prob = pr.wrapping_add(((1 as std::ffi::c_int) << 7 as std::ffi::c_int) as u32) as u16;
-            (*p).rc.dec.range = size0;
-            if (*p).rc.dec.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                (*p).rc.dec.code = (*p).rc.dec.code << 8 as std::ffi::c_int
-                    | ((*(*p).rc.dec.stream).read).expect("non-null function pointer")(
-                        (*p).rc.dec.stream,
-                    ) as u32;
-                (*p).rc.dec.range <<= 8 as std::ffi::c_int;
-            }
+
+            (*p).rc.decode_bit_0(size0)?;
+
             let freq: std::ffi::c_uint = (*s_0).freq as std::ffi::c_uint;
             let c: *mut Context = ((*p).base).offset(
                 ((*s_0).successor_0 as u32 | ((*s_0).successor_1 as u32) << 16 as std::ffi::c_int)
@@ -222,12 +166,13 @@ pub unsafe fn decode_symbol(p: *mut PPMd7) -> std::ffi::c_int {
             } else {
                 update_model(p);
             }
-            return sym_1 as std::ffi::c_int;
+            return Ok(sym_1 as std::ffi::c_int);
         }
         *prob = pr as u16;
         (*p).init_esc = (*p).exp_escape[(pr >> 10 as std::ffi::c_int) as usize] as std::ffi::c_uint;
-        (*p).rc.dec.code = ((*p).rc.dec.code).wrapping_sub(size0);
-        (*p).rc.dec.range = ((*p).rc.dec.range).wrapping_sub(size0);
+
+        (*p).rc.decode_bit_1(size0);
+
         let mut z_0: usize = 0;
         z_0 = 0 as std::ffi::c_int as usize;
         while z_0
@@ -266,27 +211,14 @@ pub unsafe fn decode_symbol(p: *mut PPMd7) -> std::ffi::c_int {
         let mut see: *mut See = 0 as *mut See;
         let mut mc: *mut Context = 0 as *mut Context;
         let mut numMasked: std::ffi::c_uint = 0;
-        if (*p).rc.dec.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-            (*p).rc.dec.code = (*p).rc.dec.code << 8 as std::ffi::c_int
-                | ((*(*p).rc.dec.stream).read).expect("non-null function pointer")(
-                    (*p).rc.dec.stream,
-                ) as u32;
-            (*p).rc.dec.range <<= 8 as std::ffi::c_int;
-            if (*p).rc.dec.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                (*p).rc.dec.code = (*p).rc.dec.code << 8 as std::ffi::c_int
-                    | ((*(*p).rc.dec.stream).read).expect("non-null function pointer")(
-                        (*p).rc.dec.stream,
-                    ) as u32;
-                (*p).rc.dec.range <<= 8 as std::ffi::c_int;
-            }
-        }
+        (*p).rc.normalize_remote()?;
         mc = (*p).min_context;
         numMasked = (*mc).num_stats as std::ffi::c_uint;
         loop {
             (*p).order_fall = ((*p).order_fall).wrapping_add(1);
             (*p).order_fall;
             if (*mc).suffix == 0 {
-                return -(1 as std::ffi::c_int);
+                return Ok(SYM_END);
             }
             mc = ((*p).base).offset((*mc).suffix as isize) as *mut std::ffi::c_void as *mut Context;
             if !((*mc).num_stats as std::ffi::c_uint == numMasked) {
@@ -324,8 +256,9 @@ pub unsafe fn decode_symbol(p: *mut PPMd7) -> std::ffi::c_int {
         }
         see = make_esc_freq(p, numMasked, &mut freqSum);
         freqSum = freqSum.wrapping_add(hiCnt_0);
-        (*p).rc.dec.range = (*p).rc.dec.range / freqSum;
-        count_0 = (*p).rc.dec.code / (*p).rc.dec.range;
+
+        count_0 = (*p).rc.get_threshold(freqSum);
+
         if count_0 < hiCnt_0 {
             let mut sym_2: u8 = 0;
             s_1 = ((*p).base).offset((*(*p).min_context).union4.stats as isize)
@@ -343,28 +276,14 @@ pub unsafe fn decode_symbol(p: *mut PPMd7) -> std::ffi::c_int {
                 }
             }
             s_1 = s_1.offset(-1);
-            s_1;
-            range_decoder_decode(
-                p,
+
+            (*p).rc.decode_final(
                 hiCnt_0
                     .wrapping_sub(count_0)
                     .wrapping_sub((*s_1).freq as u32),
                 (*s_1).freq as u32,
-            );
-            if (*p).rc.dec.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                (*p).rc.dec.code = (*p).rc.dec.code << 8 as std::ffi::c_int
-                    | ((*(*p).rc.dec.stream).read).expect("non-null function pointer")(
-                        (*p).rc.dec.stream,
-                    ) as u32;
-                (*p).rc.dec.range <<= 8 as std::ffi::c_int;
-                if (*p).rc.dec.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                    (*p).rc.dec.code = (*p).rc.dec.code << 8 as std::ffi::c_int
-                        | ((*(*p).rc.dec.stream).read).expect("non-null function pointer")(
-                            (*p).rc.dec.stream,
-                        ) as u32;
-                    (*p).rc.dec.range <<= 8 as std::ffi::c_int;
-                }
-            }
+            )?;
+
             if ((*see).shift as std::ffi::c_int) < 7 as std::ffi::c_int && {
                 (*see).count = ((*see).count).wrapping_sub(1);
                 (*see).count as std::ffi::c_int == 0 as std::ffi::c_int
@@ -377,12 +296,15 @@ pub unsafe fn decode_symbol(p: *mut PPMd7) -> std::ffi::c_int {
             (*p).found_state = s_1;
             sym_2 = (*s_1).symbol;
             update2(p);
-            return sym_2 as std::ffi::c_int;
+            return Ok(sym_2 as std::ffi::c_int);
         }
+
         if count_0 >= freqSum {
-            return -(2 as std::ffi::c_int);
+            return Ok(SYM_ERROR);
         }
-        range_decoder_decode(p, hiCnt_0, freqSum.wrapping_sub(hiCnt_0));
+
+        (*p).rc.decode(hiCnt_0, freqSum.wrapping_sub(hiCnt_0));
+
         (*see).summ = ((*see).summ as u32).wrapping_add(freqSum) as u16;
         s_1 = ((*p).base).offset((*(*p).min_context).union4.stats as isize) as *mut std::ffi::c_void
             as *mut State;

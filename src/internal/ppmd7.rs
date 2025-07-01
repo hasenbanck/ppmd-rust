@@ -1,16 +1,25 @@
 mod decoder;
 mod encoder;
+mod range_coding;
 
 use std::{
     alloc::{alloc_zeroed, dealloc, Layout},
+    io::{Read, Write},
+    mem::ManuallyDrop,
     ptr::{null_mut, NonNull},
 };
 
-pub use decoder::*;
-pub use encoder::*;
+pub(crate) use decoder::*;
+pub(crate) use encoder::*;
+pub(crate) use range_coding::*;
 
 use super::*;
 use crate::Error;
+
+const MAX_FREQ: u8 = 124;
+const UNIT_SIZE: isize = 12;
+const K_TOP_VALUE: u32 = 1 << 24;
+const EMPTY_NODE: u16 = 0;
 
 static K_EXP_ESCAPE: [u8; 16] = [25, 14, 9, 7, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2];
 
@@ -20,89 +29,63 @@ static K_INIT_BIN_ESC: [u16; 8] = [
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Node {
-    pub stamp: u16,
-    pub nu: u16,
-    pub next: u32,
-    pub prev: u32,
+struct Node {
+    stamp: u16,
+    nu: u16,
+    next: u32,
+    prev: u32,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union NodeUnion {
-    pub node: Node,
-    pub next_ref: u32,
+union NodeUnion {
+    node: Node,
+    next_ref: u32,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Context {
-    pub num_stats: u16,
-    pub union2: Union2,
-    pub union4: Union4,
-    pub suffix: u32,
+struct Context {
+    num_stats: u16,
+    union2: Union2,
+    union4: Union4,
+    suffix: u32,
 }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct RangeDecoder {
-    pub range: u32,
-    pub code: u32,
-    pub low: u32,
-    pub stream: IByteInPtr,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct RangeEncoder {
-    pub range: u32,
-    pub cache: u8,
-    pub low: u64,
-    pub cache_size: u64,
-    pub stream: IByteOutPtr,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union RangeCoder {
-    pub dec: RangeDecoder,
-    pub enc: RangeEncoder,
-}
-
-pub struct PPMd7 {
-    pub min_context: *mut Context,
-    pub max_context: *mut Context,
-    pub found_state: *mut State,
-    pub order_fall: std::ffi::c_uint,
-    pub init_esc: std::ffi::c_uint,
-    pub prev_success: std::ffi::c_uint,
-    pub max_order: std::ffi::c_uint,
-    pub hi_bits_flag: std::ffi::c_uint,
-    pub run_length: i32,
-    pub init_rl: i32,
-    pub size: u32,
-    pub glue_count: u32,
-    pub align_offset: u32,
-    pub base: *mut u8,
-    pub lo_unit: *mut u8,
-    pub hi_unit: *mut u8,
-    pub text: *mut u8,
-    pub units_start: *mut u8,
-    pub rc: RangeCoder,
-    pub index2units: [u8; 40],
-    pub units2index: [u8; 128],
-    pub free_list: [u32; 38],
-    pub ns2bs_index: [u8; 256],
-    pub ns2index: [u8; 256],
-    pub exp_escape: [u8; 16],
-    pub dummy_see: See,
-    pub see: [[See; 16]; 25],
-    pub bin_summ: [[u16; 64]; 128],
+pub(crate) struct PPMd7<RC> {
+    min_context: *mut Context,
+    max_context: *mut Context,
+    found_state: *mut State,
+    order_fall: std::ffi::c_uint,
+    init_esc: std::ffi::c_uint,
+    prev_success: std::ffi::c_uint,
+    max_order: std::ffi::c_uint,
+    hi_bits_flag: std::ffi::c_uint,
+    run_length: i32,
+    init_rl: i32,
+    size: u32,
+    glue_count: u32,
+    align_offset: u32,
+    base: *mut u8,
+    lo_unit: *mut u8,
+    hi_unit: *mut u8,
+    text: *mut u8,
+    units_start: *mut u8,
+    index2units: [u8; 40],
+    units2index: [u8; 128],
+    free_list: [u32; 38],
+    ns2bs_index: [u8; 256],
+    ns2index: [u8; 256],
+    exp_escape: [u8; 16],
+    dummy_see: See,
+    see: [[See; 16]; 25],
+    bin_summ: [[u16; 64]; 128],
     memory_ptr: NonNull<u8>,
     memory_layout: Layout,
+    rc: RC,
 }
 
-impl Drop for PPMd7 {
+impl<RC> Drop for PPMd7<RC> {
     fn drop(&mut self) {
         unsafe {
             dealloc(self.memory_ptr.as_ptr(), self.memory_layout);
@@ -110,8 +93,8 @@ impl Drop for PPMd7 {
     }
 }
 
-impl PPMd7 {
-    pub(crate) fn construct(rc: RangeCoder, order: u32, mem_size: u32) -> Result<Self, Error> {
+impl<RC> PPMd7<RC> {
+    fn construct(rc: RC, order: u32, mem_size: u32) -> Result<Self, Error> {
         let mut units2index = [0u8; 128];
         let mut index2units = [0u8; 40];
 
@@ -181,7 +164,6 @@ impl PPMd7 {
             hi_unit: null_mut(),
             text: null_mut(),
             units_start: null_mut(),
-            rc,
             units2index,
             index2units,
             ns2bs_index,
@@ -193,6 +175,7 @@ impl PPMd7 {
             bin_summ: [[0; 64]; 128],
             memory_ptr,
             memory_layout,
+            rc,
         };
 
         unsafe { restart_model(&mut ppmd) };
@@ -201,21 +184,21 @@ impl PPMd7 {
     }
 }
 
-unsafe fn insert_node(p: *mut PPMd7, node: *mut std::ffi::c_void, indx: std::ffi::c_uint) {
+unsafe fn insert_node<RC>(p: *mut PPMd7<RC>, node: *mut std::ffi::c_void, indx: std::ffi::c_uint) {
     *(node as *mut u32) = (*p).free_list[indx as usize];
     (*p).free_list[indx as usize] =
         (node as *mut u8).offset_from((*p).base) as std::ffi::c_long as u32;
 }
 
-unsafe fn remove_node(p: *mut PPMd7, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
+unsafe fn remove_node<RC>(p: *mut PPMd7<RC>, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
     let node: *mut u32 = ((*p).base).offset((*p).free_list[indx as usize] as isize)
         as *mut std::ffi::c_void as *mut u32;
     (*p).free_list[indx as usize] = *node;
     return node as *mut std::ffi::c_void;
 }
 
-unsafe fn split_block(
-    p: *mut PPMd7,
+unsafe fn split_block<RC>(
+    p: *mut PPMd7<RC>,
     mut ptr: *mut std::ffi::c_void,
     oldIndx: std::ffi::c_uint,
     newIndx: std::ffi::c_uint,
@@ -242,7 +225,7 @@ unsafe fn split_block(
     }
     insert_node(p, ptr, i);
 }
-unsafe fn glue_free_blocks(p: *mut PPMd7) {
+unsafe fn glue_free_blocks<RC>(p: *mut PPMd7<RC>) {
     let mut head: u32 = 0;
     let mut n: u32 = 0 as std::ffi::c_int as u32;
     (*p).glue_count = 255 as std::ffi::c_int as u32;
@@ -343,7 +326,7 @@ unsafe fn glue_free_blocks(p: *mut PPMd7) {
     }
 }
 #[inline(never)]
-unsafe fn alloc_units_rare(p: *mut PPMd7, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
+unsafe fn alloc_units_rare<RC>(p: *mut PPMd7<RC>, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
     let mut i: std::ffi::c_uint = 0;
     if (*p).glue_count == 0 as std::ffi::c_int as u32 {
         glue_free_blocks(p);
@@ -383,7 +366,7 @@ unsafe fn alloc_units_rare(p: *mut PPMd7, indx: std::ffi::c_uint) -> *mut std::f
     split_block(p, block, i, indx);
     return block;
 }
-unsafe fn alloc_units(p: *mut PPMd7, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
+unsafe fn alloc_units<RC>(p: *mut PPMd7<RC>, indx: std::ffi::c_uint) -> *mut std::ffi::c_void {
     if (*p).free_list[indx as usize] != 0 as std::ffi::c_int as u32 {
         return remove_node(p, indx);
     }
@@ -401,7 +384,7 @@ unsafe fn set_successor(p: *mut State, v: u32) {
     (*p).successor_1 = (v >> 16 as std::ffi::c_int) as u16;
 }
 #[inline(never)]
-unsafe fn restart_model(p: *mut PPMd7) {
+unsafe fn restart_model<RC>(p: *mut PPMd7<RC>) {
     let mut i: std::ffi::c_uint = 0;
     let mut k: std::ffi::c_uint = 0;
     ((*p).free_list).as_mut_ptr().write_bytes(0, 38);
@@ -496,7 +479,7 @@ unsafe fn restart_model(p: *mut PPMd7) {
 }
 
 #[inline(never)]
-unsafe fn create_successors(p: *mut PPMd7) -> *mut Context {
+unsafe fn create_successors<RC>(p: *mut PPMd7<RC>) -> *mut Context {
     let mut c: *mut Context = (*p).min_context;
     let mut upBranch: u32 = (*(*p).found_state).successor_0 as u32
         | ((*(*p).found_state).successor_1 as u32) << 16 as std::ffi::c_int;
@@ -598,7 +581,7 @@ unsafe fn create_successors(p: *mut PPMd7) -> *mut Context {
 }
 
 #[inline(never)]
-pub unsafe fn update_model(p: *mut PPMd7) {
+pub unsafe fn update_model<RC>(p: *mut PPMd7<RC>) {
     let mut maxSuccessor: u32 = 0;
     let mut minSuccessor: u32 = 0;
     let mut c: *mut Context = 0 as *mut Context;
@@ -824,7 +807,7 @@ pub unsafe fn update_model(p: *mut PPMd7) {
 }
 
 #[inline(never)]
-unsafe fn rescale(p: *mut PPMd7) {
+unsafe fn rescale<RC>(p: *mut PPMd7<RC>) {
     let mut i: std::ffi::c_uint = 0;
     let mut adder: std::ffi::c_uint = 0;
     let mut sumFreq: std::ffi::c_uint = 0;
@@ -972,8 +955,8 @@ unsafe fn rescale(p: *mut PPMd7) {
         ((*p).base).offset((*mc_0).union4.stats as isize) as *mut std::ffi::c_void as *mut State;
 }
 
-pub unsafe fn make_esc_freq(
-    p: *mut PPMd7,
+pub unsafe fn make_esc_freq<RC>(
+    p: *mut PPMd7<RC>,
     numMasked: std::ffi::c_uint,
     escFreq: *mut u32,
 ) -> *mut See {
@@ -1016,7 +999,7 @@ pub unsafe fn make_esc_freq(
     }
     return see;
 }
-unsafe fn next_context(p: *mut PPMd7) {
+unsafe fn next_context<RC>(p: *mut PPMd7<RC>) {
     let c: *mut Context = ((*p).base).offset(
         ((*(*p).found_state).successor_0 as u32
             | ((*(*p).found_state).successor_1 as u32) << 16 as std::ffi::c_int) as isize,
@@ -1031,7 +1014,7 @@ unsafe fn next_context(p: *mut PPMd7) {
     };
 }
 
-pub unsafe fn update1(p: *mut PPMd7) {
+pub unsafe fn update1<RC>(p: *mut PPMd7<RC>) {
     let mut s: *mut State = (*p).found_state;
     let mut freq: std::ffi::c_uint = (*s).freq as std::ffi::c_uint;
     freq = freq.wrapping_add(4 as std::ffi::c_int as std::ffi::c_uint);
@@ -1051,7 +1034,7 @@ pub unsafe fn update1(p: *mut PPMd7) {
     next_context(p);
 }
 
-pub unsafe fn Update1_0(p: *mut PPMd7) {
+pub unsafe fn update1_0<RC>(p: *mut PPMd7<RC>) {
     let s: *mut State = (*p).found_state;
     let mc: *mut Context = (*p).min_context;
     let mut freq: std::ffi::c_uint = (*s).freq as std::ffi::c_uint;
@@ -1068,7 +1051,7 @@ pub unsafe fn Update1_0(p: *mut PPMd7) {
     next_context(p);
 }
 
-pub unsafe fn update2(p: *mut PPMd7) {
+pub unsafe fn update2<RC>(p: *mut PPMd7<RC>) {
     let s: *mut State = (*p).found_state;
     let mut freq: std::ffi::c_uint = (*s).freq as std::ffi::c_uint;
     freq = freq.wrapping_add(4 as std::ffi::c_int as std::ffi::c_uint);
@@ -1080,4 +1063,60 @@ pub unsafe fn update2(p: *mut PPMd7) {
         rescale(p);
     }
     update_model(p);
+}
+
+impl<R: Read> PPMd7<RangeDecoder<R>> {
+    pub(crate) fn new_decoder(
+        reader: R,
+        order: u32,
+        mem_size: u32,
+    ) -> Result<PPMd7<RangeDecoder<R>>, Error> {
+        let range_decoder = RangeDecoder::new(reader)?;
+        Self::construct(range_decoder, order, mem_size)
+    }
+
+    pub(crate) fn into_inner(self) -> R {
+        let manual_drop_self = ManuallyDrop::new(self);
+        unsafe {
+            dealloc(
+                manual_drop_self.memory_ptr.as_ptr(),
+                manual_drop_self.memory_layout,
+            );
+        }
+        let rc = unsafe { std::ptr::read(&manual_drop_self.rc) };
+        let RangeDecoder { reader, .. } = rc;
+        reader
+    }
+
+    pub(crate) fn range_decoder_code(&self) -> u32 {
+        self.rc.code
+    }
+}
+
+impl<W: Write> PPMd7<RangeEncoder<W>> {
+    pub(crate) fn new_encoder(
+        writer: W,
+        order: u32,
+        mem_size: u32,
+    ) -> Result<PPMd7<RangeEncoder<W>>, Error> {
+        let range_encoder = RangeEncoder::new(writer);
+        Self::construct(range_encoder, order, mem_size)
+    }
+
+    pub(crate) fn into_inner(self) -> W {
+        let manual_drop_self = ManuallyDrop::new(self);
+        unsafe {
+            dealloc(
+                manual_drop_self.memory_ptr.as_ptr(),
+                manual_drop_self.memory_layout,
+            );
+        }
+        let rc = unsafe { std::ptr::read(&manual_drop_self.rc) };
+        let RangeEncoder { writer, .. } = rc;
+        writer
+    }
+
+    pub(crate) fn flush_range_encoder(&mut self) -> Result<(), std::io::Error> {
+        self.rc.flush()
+    }
 }

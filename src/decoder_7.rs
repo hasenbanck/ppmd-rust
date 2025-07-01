@@ -1,15 +1,13 @@
-use std::{io::Read, mem::ManuallyDrop};
+use std::io::Read;
 
 use crate::{
-    byte_reader::ByteReader,
-    internal::ppmd7::{decode_symbol, range_decoder_init, PPMd7, RangeCoder, RangeDecoder},
+    internal::ppmd7::{decode_symbol, PPMd7, RangeDecoder},
     Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
 
 /// A decoder to decompress data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Decoder<R: Read> {
-    ppmd: PPMd7,
-    reader: ByteReader<R>,
+    ppmd: PPMd7<RangeDecoder<R>>,
     finished: bool,
 }
 
@@ -25,36 +23,17 @@ impl<R: Read> Ppmd7Decoder<R> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut reader = ByteReader::new(reader);
-        let mut decoder = RangeDecoder {
-            range: 0,
-            code: 0,
-            low: 0,
-            stream: reader.byte_in_ptr(),
-        };
-
-        let success = unsafe { range_decoder_init(&mut decoder) };
-
-        if success == 0 {
-            return Err(Error::RangeDecoderInitialization);
-        }
-
-        let ppmd = PPMd7::construct(RangeCoder { dec: decoder }, order, mem_size)?;
+        let ppmd = PPMd7::new_decoder(reader, order, mem_size)?;
 
         Ok(Self {
             ppmd,
-            reader,
             finished: false,
         })
     }
 
     /// Returns the inner reader.
     pub fn into_inner(self) -> R {
-        let manual_drop_self = ManuallyDrop::new(self);
-        let reader = unsafe { std::ptr::read(&manual_drop_self.reader) };
-        let ppmd = unsafe { std::ptr::read(&manual_drop_self.ppmd) };
-        drop(ppmd);
-        reader.inner.reader
+        self.ppmd.into_inner()
     }
 }
 
@@ -73,7 +52,7 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
 
         unsafe {
             for byte in buf.iter_mut() {
-                sym = decode_symbol(&mut self.ppmd);
+                sym = decode_symbol(&mut self.ppmd)?;
 
                 if sym < 0 {
                     break;
@@ -84,7 +63,7 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
             }
         }
 
-        let code = unsafe { self.ppmd.rc.dec.code };
+        let code = self.ppmd.range_decoder_code();
 
         if sym >= 0 {
             return Ok(decoded);
@@ -101,20 +80,5 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
 
         // END_MARKER detected
         Ok(decoded)
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::Ppmd7Decoder;
-
-    const ORDER: u32 = 8;
-    const MEM_SIZE: u32 = 262144;
-
-    #[test]
-    fn ppmd7decoder_init_drop() {
-        let reader: &[u8] = &[];
-        let decoder = Ppmd7Decoder::new(reader, ORDER, MEM_SIZE).unwrap();
-        assert!(!decoder.ppmd.base.is_null());
     }
 }
