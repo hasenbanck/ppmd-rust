@@ -1,3 +1,5 @@
+use std::{io::Write, mem::ManuallyDrop};
+
 use crate::{
     byte_writer::ByteWriter,
     internal::ppmd7::{
@@ -5,8 +7,6 @@ use crate::{
     },
     Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
-use std::io::Write;
-use std::mem::ManuallyDrop;
 
 /// An encoder to compress data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Encoder<W: Write> {

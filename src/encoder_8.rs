@@ -2,7 +2,9 @@ use std::{io::Write, mem::ManuallyDrop};
 
 use crate::{
     byte_writer::ByteWriter,
-    internal::ppmd8::{alloc, construct, encode_symbol, free, init, range_encoder_flush, Ppmd8},
+    internal::ppmd8::{
+        alloc, construct, encode_symbol, free, init, range_encoder_flush, range_encoder_init, Ppmd8,
+    },
     memory::Memory,
     Error, RestoreMethod, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER,
     SYM_END,
@@ -46,9 +48,7 @@ impl<W: Write> Ppmd8Encoder<W> {
         let mut writer = ByteWriter::new(writer);
         ppmd.stream.output = writer.byte_out_ptr();
 
-        // #define Init_RangeEnc(p) { (p)->Low = 0; (p)->Range = 0xFFFFFFFF; }
-        ppmd.low = 0;
-        ppmd.range = 0xFFFFFFFF;
+        unsafe { range_encoder_init(&mut ppmd) }
 
         unsafe { init(&mut ppmd, order, restore_method as _) };
 
