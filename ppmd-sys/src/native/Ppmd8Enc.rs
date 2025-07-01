@@ -8,11 +8,9 @@
     unused_mut
 )]
 
-use crate::native::ppmd8::*;
-use crate::native::*;
-use crate::*;
+use super::ppmd8::*;
 
-pub unsafe fn Ppmd8_Flush_RangeEnc(mut p: *mut CPpmd8) {
+pub unsafe extern "C" fn Ppmd8_Flush_RangeEnc(mut p: *mut CPpmd8) {
     let mut i: std::ffi::c_uint = 0;
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
     while i < 4 as std::ffi::c_int as std::ffi::c_uint {
@@ -25,8 +23,8 @@ pub unsafe fn Ppmd8_Flush_RangeEnc(mut p: *mut CPpmd8) {
         (*p).Low <<= 8 as std::ffi::c_int;
     }
 }
-
-unsafe fn Ppmd8_RangeEnc_Encode(
+#[inline(always)]
+unsafe extern "C" fn Ppmd8_RangeEnc_Encode(
     mut p: *mut CPpmd8,
     mut start: UInt32,
     mut size: UInt32,
@@ -37,7 +35,7 @@ unsafe fn Ppmd8_RangeEnc_Encode(
     (*p).Range = (*p).Range * size;
 }
 
-pub unsafe fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std::ffi::c_int) {
+pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std::ffi::c_int) {
     let mut charMask: [size_t; 32] = [0; 32];
     if (*(*p).MinContext).NumStats as std::ffi::c_int != 0 as std::ffi::c_int {
         let mut s: *mut CPpmd_State = ((*p).Base).offset((*(*p).MinContext).Union4.Stats as isize)
@@ -112,8 +110,8 @@ pub unsafe fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std::ffi::c_int
         let mut z: size_t = 0;
         z = 0 as std::ffi::c_int as size_t;
         while z
-            < (256 as std::ffi::c_int as usize)
-                .wrapping_div(::core::mem::size_of::<size_t>() as usize)
+            < (256 as std::ffi::c_int as std::ffi::c_ulong)
+                .wrapping_div(::core::mem::size_of::<size_t>() as std::ffi::c_ulong)
         {
             charMask[z.wrapping_add(0 as std::ffi::c_int as size_t) as usize] =
                 !(0 as std::ffi::c_int as size_t);
@@ -241,8 +239,8 @@ pub unsafe fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std::ffi::c_int
         let mut z_0: size_t = 0;
         z_0 = 0 as std::ffi::c_int as size_t;
         while z_0
-            < (256 as std::ffi::c_int as usize)
-                .wrapping_div(::core::mem::size_of::<size_t>() as usize)
+            < (256 as std::ffi::c_int as std::ffi::c_ulong)
+                .wrapping_div(::core::mem::size_of::<size_t>() as std::ffi::c_ulong)
         {
             charMask[z_0.wrapping_add(0 as std::ffi::c_int as size_t) as usize] =
                 !(0 as std::ffi::c_int as size_t);

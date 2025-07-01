@@ -8,14 +8,12 @@
     unused_mut
 )]
 
-use crate::native::ppmd8::*;
-use crate::native::*;
-use crate::*;
+use super::ppmd8::*;
 
-pub unsafe fn Ppmd8_Init_RangeDec(mut p: *mut CPpmd8) -> BoolInt {
+pub unsafe extern "C" fn Ppmd8_Init_RangeDec(mut p: *mut CPpmd8) -> BoolInt {
     let mut i: std::ffi::c_uint = 0;
     (*p).Code = 0 as std::ffi::c_int as UInt32;
-    (*p).Range = 0xFFFFFFFF as std::ffi::c_uint;
+    (*p).Range = 0xffffffff as std::ffi::c_uint;
     (*p).Low = 0 as std::ffi::c_int as UInt32;
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
     while i < 4 as std::ffi::c_int as std::ffi::c_uint {
@@ -25,17 +23,17 @@ pub unsafe fn Ppmd8_Init_RangeDec(mut p: *mut CPpmd8) -> BoolInt {
         i = i.wrapping_add(1);
         i;
     }
-    return ((*p).Code < 0xFFFFFFFF as std::ffi::c_uint) as std::ffi::c_int;
+    return ((*p).Code < 0xffffffff as std::ffi::c_uint) as std::ffi::c_int;
 }
-
-unsafe fn Ppmd8_RD_Decode(mut p: *mut CPpmd8, mut start: UInt32, mut size: UInt32) {
+#[inline(always)]
+unsafe extern "C" fn Ppmd8_RD_Decode(mut p: *mut CPpmd8, mut start: UInt32, mut size: UInt32) {
     start = start * (*p).Range;
     (*p).Low = ((*p).Low).wrapping_add(start);
     (*p).Code = ((*p).Code).wrapping_sub(start);
     (*p).Range = (*p).Range * size;
 }
 
-pub unsafe fn Ppmd8_DecodeSymbol(mut p: *mut CPpmd8) -> std::ffi::c_int {
+pub unsafe extern "C" fn Ppmd8_DecodeSymbol(mut p: *mut CPpmd8) -> std::ffi::c_int {
     let mut charMask: [size_t; 32] = [0; 32];
     if (*(*p).MinContext).NumStats as std::ffi::c_int != 0 as std::ffi::c_int {
         let mut s: *mut CPpmd_State = ((*p).Base).offset((*(*p).MinContext).Union4.Stats as isize)
@@ -120,8 +118,8 @@ pub unsafe fn Ppmd8_DecodeSymbol(mut p: *mut CPpmd8) -> std::ffi::c_int {
         let mut z: size_t = 0;
         z = 0 as std::ffi::c_int as size_t;
         while z
-            < (256 as std::ffi::c_int as usize)
-                .wrapping_div(::core::mem::size_of::<size_t>() as usize)
+            < (256 as std::ffi::c_int as std::ffi::c_ulong)
+                .wrapping_div(::core::mem::size_of::<size_t>() as std::ffi::c_ulong)
         {
             charMask[z.wrapping_add(0 as std::ffi::c_int as size_t) as usize] =
                 !(0 as std::ffi::c_int as size_t);
@@ -251,8 +249,8 @@ pub unsafe fn Ppmd8_DecodeSymbol(mut p: *mut CPpmd8) -> std::ffi::c_int {
         let mut z_0: size_t = 0;
         z_0 = 0 as std::ffi::c_int as size_t;
         while z_0
-            < (256 as std::ffi::c_int as usize)
-                .wrapping_div(::core::mem::size_of::<size_t>() as usize)
+            < (256 as std::ffi::c_int as std::ffi::c_ulong)
+                .wrapping_div(::core::mem::size_of::<size_t>() as std::ffi::c_ulong)
         {
             charMask[z_0.wrapping_add(0 as std::ffi::c_int as size_t) as usize] =
                 !(0 as std::ffi::c_int as size_t);
