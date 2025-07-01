@@ -1,12 +1,10 @@
 use std::io::Write;
 
-use ppmd_sys::{
-    CPpmd8, Ppmd8_Alloc, Ppmd8_Construct, Ppmd8_EncodeSymbol, Ppmd8_Flush_RangeEnc, Ppmd8_Init,
-    PPMD8_MAX_ORDER, PPMD8_MIN_ORDER,
-};
-
 use super::{byte_writer::ByteWriter, memory::Memory};
 use crate::{Error, RestoreMethod};
+use ppmd_sys::native::ppmd8::{CPpmd8, Ppmd8_Alloc, Ppmd8_Construct, Ppmd8_Init};
+use ppmd_sys::native::ppmd8enc::{Ppmd8_EncodeSymbol, Ppmd8_Flush_RangeEnc};
+use ppmd_sys::{PPMD8_MAX_ORDER, PPMD8_MIN_ORDER};
 
 /// A encoder to encode PPMd8 (PPMdI) compressed data.
 pub struct Ppmd8Encoder<W: Write> {
