@@ -26,18 +26,11 @@
 //! ## License
 //!
 //! The code in this crate is in the public domain as the original code by their authors.
-//mod decoder_7;
-//mod encoder_7;
 
-//mod decoder_8;
-//mod encoder_8;
-//mod internal;
-pub mod old;
+mod native;
+mod old;
 
-//pub use decoder_7::Ppmd7Decoder;
-//pub use decoder_8::Ppmd8Decoder;
-//pub use encoder_7::Ppmd7Encoder;
-//pub use encoder_8::Ppmd8Encoder;
+pub use native::{Ppmd7Decoder, Ppmd7Encoder, Ppmd8Decoder, Ppmd8Encoder};
 
 /// The minimal order PPMd7 supports.
 pub const PPMD7_MIN_ORDER: u32 = 2;

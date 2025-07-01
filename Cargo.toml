@@ -10,7 +10,3 @@ keywords = ["ppmd"]
 license = "CC0-1.0"
 
 [dependencies]
-ppmd-sys = { version = "0.2.0", path = "ppmd-sys" }
-
-[workspace]
-members = ["ppmd-sys"]

@@ -1,7 +1,9 @@
-use ppmd_rust::old::{Ppmd7Decoder, Ppmd7Encoder, Ppmd8Decoder, Ppmd8Encoder};
-use ppmd_rust::RestoreMethod;
-use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::{
+    io::{Read, Write},
+    path::PathBuf,
+};
+
+use ppmd_rust::{Ppmd7Decoder, Ppmd7Encoder, Ppmd8Decoder, Ppmd8Encoder, RestoreMethod};
 
 trait PPMdVersion {
     fn compression(level: u32) -> (u32, u32);
