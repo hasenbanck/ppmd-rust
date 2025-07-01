@@ -1,19 +1,17 @@
-use std::{io::Write, mem::ManuallyDrop};
-
 use crate::{
     byte_writer::ByteWriter,
     internal::ppmd7::{
-        alloc, construct, encode_symbol, free, range_encoder_flush, range_encoder_init, Init, PPMd7,
+        encode_symbol, range_encoder_flush, range_encoder_init, PPMd7, RangeCoder, RangeEncoder,
     },
-    memory::Memory,
     Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
+use std::io::Write;
+use std::mem::ManuallyDrop;
 
 /// An encoder to compress data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Encoder<W: Write> {
     ppmd: PPMd7,
     writer: ByteWriter<W>,
-    memory: Memory,
 }
 
 impl<W: Write> Ppmd7Encoder<W> {
@@ -28,41 +26,28 @@ impl<W: Write> Ppmd7Encoder<W> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<PPMd7>() };
-        unsafe { construct(&mut ppmd) };
-
-        let mut memory = Memory::new(mem_size);
-
-        let success = unsafe { alloc(&mut ppmd, mem_size, memory.allocation()) };
-
-        if success == 0 {
-            return Err(Error::MemoryAllocation);
-        }
-
         let mut writer = ByteWriter::new(writer);
-        let range_encoder = unsafe { &mut ppmd.rc.enc };
-        range_encoder.stream = writer.byte_out_ptr();
+        let encoder = RangeEncoder {
+            range: 0,
+            cache: 0,
+            low: 0,
+            cache_size: 0,
+            stream: writer.byte_out_ptr(),
+        };
+
+        let mut ppmd = PPMd7::new(RangeCoder { enc: encoder }, order, mem_size)?;
 
         unsafe { range_encoder_init(&mut ppmd) };
-        unsafe { Init(&mut ppmd, order) };
 
-        Ok(Self {
-            ppmd,
-            writer,
-            memory,
-        })
+        Ok(Self { ppmd, writer })
     }
 
     /// Returns the inner writer.
     pub fn into_inner(self) -> W {
-        let mut manual_drop_self = ManuallyDrop::new(self);
-        unsafe {
-            free(
-                &mut manual_drop_self.ppmd,
-                manual_drop_self.memory.allocation(),
-            )
-        }
+        let manual_drop_self = ManuallyDrop::new(self);
         let writer = unsafe { std::ptr::read(&manual_drop_self.writer) };
+        let ppmd = unsafe { std::ptr::read(&manual_drop_self.ppmd) };
+        drop(ppmd);
         writer.inner.writer
     }
 
