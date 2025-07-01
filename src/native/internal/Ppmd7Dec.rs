@@ -1,7 +1,7 @@
 use super::ppmd7::*;
 use super::*;
 
-pub unsafe fn range_decoder_init(mut p: *mut RangeDecoder) -> i32 {
+pub unsafe fn range_decoder_init(p: *mut RangeDecoder) -> i32 {
     let mut i: std::ffi::c_uint = 0;
     (*p).code = 0 as std::ffi::c_int as u32;
     (*p).range = 0xFFFFFFFF as std::ffi::c_uint;
@@ -21,12 +21,12 @@ pub unsafe fn range_decoder_init(mut p: *mut RangeDecoder) -> i32 {
 }
 
 #[inline(always)]
-unsafe fn range_decoder_decode(mut p: *mut Ppmd7, mut start: u32, mut size: u32) {
+unsafe fn range_decoder_decode(p: *mut Ppmd7, start: u32, size: u32) {
     (*p).rc.dec.code = ((*p).rc.dec.code).wrapping_sub(start * (*p).rc.dec.range);
     (*p).rc.dec.range = (*p).rc.dec.range * size;
 }
 
-pub unsafe fn decode_symbol(mut p: *mut Ppmd7) -> std::ffi::c_int {
+pub unsafe fn decode_symbol(p: *mut Ppmd7) -> std::ffi::c_int {
     let mut charMask: [usize; 32] = [0; 32];
     if (*(*p).min_context).num_stats as std::ffi::c_int != 1 as std::ffi::c_int {
         let mut s: *mut State = ((*p).base).offset((*(*p).min_context).union4.stats as isize)
@@ -148,12 +148,12 @@ pub unsafe fn decode_symbol(mut p: *mut Ppmd7) -> std::ffi::c_int {
             }
         }
     } else {
-        let mut s_0: *mut State = &mut (*(*p).min_context).union2 as *mut Union2 as *mut State;
+        let s_0: *mut State = &mut (*(*p).min_context).union2 as *mut Union2 as *mut State;
         (*p).hi_bits_flag = ((*(*p).found_state).symbol as std::ffi::c_uint)
             .wrapping_add(0xC0 as std::ffi::c_int as std::ffi::c_uint)
             >> 8 as std::ffi::c_int - 3 as std::ffi::c_int
             & ((1 as std::ffi::c_int) << 3 as std::ffi::c_int) as std::ffi::c_uint;
-        let mut prob: *mut u16 = &mut *(*((*p).bin_summ).as_mut_ptr().offset(
+        let prob: *mut u16 = &mut *(*((*p).bin_summ).as_mut_ptr().offset(
             ((*(&mut (*(*p).min_context).union2 as *mut Union2 as *mut State)).freq
                 as std::ffi::c_uint as usize)
                 .wrapping_sub(1 as std::ffi::c_int as usize) as isize,
@@ -184,7 +184,7 @@ pub unsafe fn decode_symbol(mut p: *mut Ppmd7) -> std::ffi::c_int {
                 .wrapping_add((*p).hi_bits_flag) as isize,
         ) as *mut u16;
         let mut pr: u32 = *prob as u32;
-        let mut size0: u32 = ((*p).rc.dec.range >> 14 as std::ffi::c_int) * pr;
+        let size0: u32 = ((*p).rc.dec.range >> 14 as std::ffi::c_int) * pr;
         pr = pr.wrapping_sub(
             pr.wrapping_add(
                 ((1 as std::ffi::c_int) << 7 as std::ffi::c_int - 2 as std::ffi::c_int) as u32,
@@ -201,8 +201,8 @@ pub unsafe fn decode_symbol(mut p: *mut Ppmd7) -> std::ffi::c_int {
                     ) as u32;
                 (*p).rc.dec.range <<= 8 as std::ffi::c_int;
             }
-            let mut freq: std::ffi::c_uint = (*s_0).freq as std::ffi::c_uint;
-            let mut c: *mut Context = ((*p).base).offset(
+            let freq: std::ffi::c_uint = (*s_0).freq as std::ffi::c_uint;
+            let c: *mut Context = ((*p).base).offset(
                 ((*s_0).successor_0 as u32 | ((*s_0).successor_1 as u32) << 16 as std::ffi::c_int)
                     as isize,
             ) as *mut std::ffi::c_void as *mut Context;
