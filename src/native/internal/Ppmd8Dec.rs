@@ -119,10 +119,7 @@ pub unsafe extern "C" fn Ppmd8_DecodeSymbol(mut p: *mut CPpmd8) -> std::ffi::c_i
         Ppmd8_RD_Decode(p, hiCnt, summFreq.wrapping_sub(hiCnt));
         let mut z: size_t = 0;
         z = 0 as std::ffi::c_int as size_t;
-        while z
-            < (256 as std::ffi::c_int as std::ffi::c_ulong)
-                .wrapping_div(::core::mem::size_of::<size_t>() as std::ffi::c_ulong)
-        {
+        while z < 256usize.wrapping_div(::core::mem::size_of::<size_t>()) {
             charMask[z.wrapping_add(0 as std::ffi::c_int as size_t) as usize] =
                 !(0 as std::ffi::c_int as size_t);
             charMask[z.wrapping_add(1 as std::ffi::c_int as size_t) as usize] =
@@ -250,10 +247,7 @@ pub unsafe extern "C" fn Ppmd8_DecodeSymbol(mut p: *mut CPpmd8) -> std::ffi::c_i
         .wrapping_sub(size0);
         let mut z_0: size_t = 0;
         z_0 = 0 as std::ffi::c_int as size_t;
-        while z_0
-            < (256 as std::ffi::c_int as std::ffi::c_ulong)
-                .wrapping_div(::core::mem::size_of::<size_t>() as std::ffi::c_ulong)
-        {
+        while z_0 < 256usize.wrapping_div(::core::mem::size_of::<size_t>()) {
             charMask[z_0.wrapping_add(0 as std::ffi::c_int as size_t) as usize] =
                 !(0 as std::ffi::c_int as size_t);
             charMask[z_0.wrapping_add(1 as std::ffi::c_int as size_t) as usize] =
