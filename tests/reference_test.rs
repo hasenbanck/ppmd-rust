@@ -36,7 +36,7 @@ impl PPMdVersion for PPMd7 {
         {
             let mut ppmd7 = Ppmd7Encoder::new(&mut compressed, order, memory_size).unwrap();
             ppmd7.write_all(text.as_bytes()).unwrap();
-            ppmd7.flush().unwrap();
+            ppmd7.finish(false).unwrap();
         }
         compressed
     }
@@ -78,7 +78,7 @@ impl PPMdVersion for PPMd8 {
                 Ppmd8Encoder::new(&mut compressed, order, memory_size, RestoreMethod::Restart)
                     .unwrap();
             ppmd8.write_all(text.as_bytes()).unwrap();
-            ppmd8.flush().unwrap();
+            ppmd8.finish(false).unwrap();
         }
         compressed
     }

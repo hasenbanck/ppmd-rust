@@ -28,7 +28,7 @@
 //! The code in this crate is in the public domain as the original code by their authors.
 
 mod native;
-mod old;
+//mod old;
 
 pub use native::{Ppmd7Decoder, Ppmd7Encoder, Ppmd8Decoder, Ppmd8Encoder};
 

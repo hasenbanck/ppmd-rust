@@ -1,5 +1,3 @@
-use std::io::Read;
-
 use crate::{
     native::{
         internal::ppmd7::{CPpmd7, Ppmd7_Alloc, Ppmd7_Construct, Ppmd7_Free, Ppmd7_Init},
@@ -7,20 +5,25 @@ use crate::{
     },
     PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
+use std::io::Read;
+use std::mem::ManuallyDrop;
 
 use super::{byte_reader::ByteReader, memory::Memory};
 use crate::Error;
 
-/// A decoder to decode PPMd7 (PPMdH) with the 7z range coder.
+/// A decoder to decompress data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Decoder<R: Read> {
     ppmd: CPpmd7,
-    _reader: ByteReader<R>,
+    reader: ByteReader<R>,
     memory: Memory,
     finished: bool,
 }
 
 impl<R: Read> Ppmd7Decoder<R> {
-    /// Creates a new [`Ppmd7Decoder`].
+    /// Creates a new [`Ppmd7Decoder`] which provides a reader over the uncompressed data.
+    ///
+    /// The given `order` must be between [`PPMD7_MIN_ORDER`] and [`PPMD7_MAX_ORDER`]
+    /// The given `mem_size` must be between [`PPMD7_MIN_MEM_SIZE`] and [`PPMD7_MAX_MEM_SIZE`]
     pub fn new(reader: R, order: u32, mem_size: u32) -> crate::Result<Self> {
         if !(PPMD7_MIN_ORDER..=PPMD7_MAX_ORDER).contains(&order)
             || !(PPMD7_MIN_MEM_SIZE..=PPMD7_MAX_MEM_SIZE).contains(&mem_size)
@@ -53,10 +56,23 @@ impl<R: Read> Ppmd7Decoder<R> {
 
         Ok(Self {
             ppmd,
-            _reader: reader,
+            reader,
             memory,
             finished: false,
         })
+    }
+
+    /// Returns the inner reader.
+    pub fn into_inner(self) -> R {
+        let mut manual_drop_self = ManuallyDrop::new(self);
+        unsafe {
+            Ppmd7_Free(
+                &mut manual_drop_self.ppmd,
+                manual_drop_self.memory.allocation(),
+            )
+        }
+        let reader = unsafe { std::ptr::read(&manual_drop_self.reader) };
+        reader.inner.reader
     }
 }
 
@@ -94,7 +110,7 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
 
         let code = unsafe { self.ppmd.rc.dec.Code };
 
-        if sym >= 0 && (!self.finished || decoded != buf.len() || code == 0) {
+        if sym >= 0 {
             return Ok(decoded);
         }
 
@@ -107,6 +123,7 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
             ));
         }
 
+        // END_MARKER detected
         Ok(decoded)
     }
 }

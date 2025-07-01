@@ -5,13 +5,13 @@ use super::internal::{Byte, IByteOutPtr, IByteOut_};
 const BUFFER_SIZE: usize = 4096;
 
 pub(crate) struct ByteWriter<W: Write> {
-    inner: Box<ByteWriterInner<W>>,
+    pub(crate) inner: Box<ByteWriterInner<W>>,
 }
 
 #[repr(C)]
-struct ByteWriterInner<W> {
+pub(crate) struct ByteWriterInner<W> {
     byte_out: IByteOut_,
-    writer: W,
+    pub(crate) writer: W,
     buffer: Vec<u8>,
 }
 
