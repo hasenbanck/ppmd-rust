@@ -1,4 +1,3 @@
-use super::ppmd7::*;
 use super::*;
 
 pub unsafe fn range_encoder_init(p: *mut PPMd7) {

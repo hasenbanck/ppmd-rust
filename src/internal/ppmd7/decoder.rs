@@ -1,4 +1,3 @@
-use super::ppmd7::*;
 use super::*;
 
 pub unsafe fn range_decoder_init(p: *mut RangeDecoder) -> i32 {

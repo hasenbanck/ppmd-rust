@@ -1,4 +1,4 @@
-use crate::native::internal::{ISzAlloc, ISzAllocPtr};
+use crate::internal::{ISzAlloc, ISzAllocPtr};
 
 pub(crate) struct Memory {
     inner: Box<MemoryInner>,

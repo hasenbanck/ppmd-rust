@@ -1,44 +1,34 @@
+use std::{io::Write, mem::ManuallyDrop};
+
 use crate::{
-    native::{
-        internal::ppmd8::{alloc, construct, free, init, Ppmd8},
-        internal::ppmd8enc::{encode_symbol, range_encoder_flush},
+    byte_writer::ByteWriter,
+    internal::ppmd7::{
+        alloc, construct, encode_symbol, free, range_encoder_flush, range_encoder_init, Init, PPMd7,
     },
-    PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER, SYM_END,
+    memory::Memory,
+    Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
 
-use std::io::Write;
-
-use std::mem::ManuallyDrop;
-
-use super::{byte_writer::ByteWriter, memory::Memory};
-
-use crate::{Error, RestoreMethod};
-
-/// A encoder to compress data using PPMd8 (PPMdI rev.1).
-pub struct Ppmd8Encoder<W: Write> {
-    ppmd: Ppmd8,
+/// An encoder to compress data using PPMd7 (PPMdH) with the 7z range coder.
+pub struct Ppmd7Encoder<W: Write> {
+    ppmd: PPMd7,
     writer: ByteWriter<W>,
     memory: Memory,
 }
 
-impl<W: Write> Ppmd8Encoder<W> {
-    /// Creates a new [`Ppmd8Encoder`] which provides a writer over the compressed data.
+impl<W: Write> Ppmd7Encoder<W> {
+    /// Creates a new [`Ppmd7Encoder`] which provides a writer over the compressed data.
     ///
-    /// The given `order` must be between [`PPMD8_MIN_ORDER`] and [`PPMD8_MAX_ORDER`] (inclusive).
-    /// The given `mem_size` must be between [`PPMD8_MIN_MEM_SIZE`] and [`PPMD8_MAX_MEM_SIZE`] (inclusive).
-    pub fn new(
-        writer: W,
-        order: u32,
-        mem_size: u32,
-        restore_method: RestoreMethod,
-    ) -> crate::Result<Self> {
-        if !(PPMD8_MIN_ORDER..=PPMD8_MAX_ORDER).contains(&order)
-            || !(PPMD8_MIN_MEM_SIZE..=PPMD8_MAX_MEM_SIZE).contains(&mem_size)
+    /// The given `order` must be between [`PPMD7_MIN_ORDER`] and [`PPMD7_MAX_ORDER`] (inclusive).
+    /// The given `mem_size` must be between [`PPMD7_MIN_MEM_SIZE`] and [`PPMD7_MAX_MEM_SIZE`] (inclusive).
+    pub fn new(writer: W, order: u32, mem_size: u32) -> crate::Result<Self> {
+        if !(PPMD7_MIN_ORDER..=PPMD7_MAX_ORDER).contains(&order)
+            || !(PPMD7_MIN_MEM_SIZE..=PPMD7_MAX_MEM_SIZE).contains(&mem_size)
         {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<Ppmd8>() };
+        let mut ppmd = unsafe { std::mem::zeroed::<PPMd7>() };
         unsafe { construct(&mut ppmd) };
 
         let mut memory = Memory::new(mem_size);
@@ -50,13 +40,11 @@ impl<W: Write> Ppmd8Encoder<W> {
         }
 
         let mut writer = ByteWriter::new(writer);
-        ppmd.stream.output = writer.byte_out_ptr();
+        let range_encoder = unsafe { &mut ppmd.rc.enc };
+        range_encoder.stream = writer.byte_out_ptr();
 
-        // #define Init_RangeEnc(p) { (p)->Low = 0; (p)->Range = 0xFFFFFFFF; }
-        ppmd.low = 0;
-        ppmd.range = 0xFFFFFFFF;
-
-        unsafe { init(&mut ppmd, order, restore_method as _) };
+        unsafe { range_encoder_init(&mut ppmd) };
+        unsafe { Init(&mut ppmd, order) };
 
         Ok(Self {
             ppmd,
@@ -82,11 +70,13 @@ impl<W: Write> Ppmd8Encoder<W> {
     ///
     /// Adds an end marker to the data if `with_end_marker` is set to `true`.
     pub fn finish(mut self, with_end_marker: bool) -> Result<W, std::io::Error> {
-        if with_end_marker {
-            unsafe { encode_symbol(&mut self.ppmd, SYM_END) };
+        unsafe {
+            if with_end_marker {
+                encode_symbol(&mut self.ppmd, SYM_END);
+            }
+            self.flush()?;
+            Ok(self.into_inner())
         }
-        self.flush()?;
-        Ok(self.into_inner())
     }
 
     fn inner_flush(&mut self) {
@@ -95,14 +85,14 @@ impl<W: Write> Ppmd8Encoder<W> {
     }
 }
 
-impl<W: Write> Write for Ppmd8Encoder<W> {
+impl<W: Write> Write for Ppmd7Encoder<W> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         if buf.is_empty() {
             return Ok(0);
         }
 
         for &byte in buf.iter() {
-            unsafe { encode_symbol(&mut self.ppmd as *mut _, byte as i32) };
+            unsafe { encode_symbol(&mut self.ppmd, byte as i32) };
         }
 
         Ok(buf.len())
@@ -118,34 +108,30 @@ impl<W: Write> Write for Ppmd8Encoder<W> {
 mod test {
     use std::io::{Read, Write};
 
-    use super::Ppmd8Encoder;
-    use crate::{native::Ppmd8Decoder, RestoreMethod};
+    use crate::{Ppmd7Decoder, Ppmd7Encoder};
 
     const ORDER: u32 = 8;
     const MEM_SIZE: u32 = 262144;
-    const RESTORE_METHOD: RestoreMethod = RestoreMethod::Restart;
 
     #[test]
-    fn ppmd8encoder_init_drop() {
+    fn ppmd7encoder_init_drop() {
         let writer = Vec::new();
-        let encoder = Ppmd8Encoder::new(writer, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
+        let encoder = Ppmd7Encoder::new(writer, ORDER, MEM_SIZE).unwrap();
         assert!(!encoder.ppmd.base.is_null());
     }
 
     #[test]
-    fn ppmd8encoder_encode_decode() {
+    fn ppmd7encoder_encode_decode() {
         let test_data = "Lorem ipsum dolor sit amet. ";
 
         let mut writer = Vec::new();
         {
-            let mut encoder =
-                Ppmd8Encoder::new(&mut writer, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
+            let mut encoder = Ppmd7Encoder::new(&mut writer, ORDER, MEM_SIZE).unwrap();
             encoder.write_all(test_data.as_bytes()).unwrap();
             encoder.flush().unwrap();
         }
 
-        let mut decoder =
-            Ppmd8Decoder::new(writer.as_slice(), ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
+        let mut decoder = Ppmd7Decoder::new(writer.as_slice(), ORDER, MEM_SIZE).unwrap();
 
         let mut decoded = vec![0; test_data.len()];
         decoder.read_exact(&mut decoded).unwrap();
