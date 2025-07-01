@@ -21,12 +21,12 @@ pub unsafe fn range_decoder_init(p: *mut RangeDecoder) -> i32 {
 }
 
 #[inline(always)]
-unsafe fn range_decoder_decode(p: *mut Ppmd7, start: u32, size: u32) {
+unsafe fn range_decoder_decode(p: *mut PPMd7, start: u32, size: u32) {
     (*p).rc.dec.code = ((*p).rc.dec.code).wrapping_sub(start * (*p).rc.dec.range);
     (*p).rc.dec.range = (*p).rc.dec.range * size;
 }
 
-pub unsafe fn decode_symbol(p: *mut Ppmd7) -> std::ffi::c_int {
+pub unsafe fn decode_symbol(p: *mut PPMd7) -> std::ffi::c_int {
     let mut charMask: [usize; 32] = [0; 32];
     if (*(*p).min_context).num_stats as std::ffi::c_int != 1 as std::ffi::c_int {
         let mut s: *mut State = ((*p).base).offset((*(*p).min_context).union4.stats as isize)
