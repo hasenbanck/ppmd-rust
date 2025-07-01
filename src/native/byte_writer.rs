@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use super::internal::{Byte, IByteOutPtr, IByteOut_};
+use super::internal::{IByteOutPtr, IByteOut_};
 
 const BUFFER_SIZE: usize = 4096;
 
@@ -41,7 +41,7 @@ impl<W: Write> ByteWriter<W> {
         unsafe { &mut *(p as *mut ByteWriterInner<W>) }
     }
 
-    unsafe extern "C" fn write_byte(p: IByteOutPtr, byte: Byte) {
+    unsafe extern "C" fn write_byte(p: IByteOutPtr, byte: u8) {
         let writer = Self::get_inner_writer(p);
 
         writer.buffer.push(byte);

@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use super::internal::{Byte, IByteInPtr, IByteIn_};
+use super::internal::{IByteInPtr, IByteIn_};
 
 pub(crate) struct ByteReader<R: Read> {
     pub(crate) inner: Box<ByteReaderInner<R>>,
@@ -45,7 +45,7 @@ impl<R: Read> ByteReader<R> {
         unsafe { &mut *(p as *mut ByteReaderInner<R>) }
     }
 
-    unsafe extern "C" fn read_byte(p: IByteInPtr) -> Byte {
+    unsafe extern "C" fn read_byte(p: IByteInPtr) -> u8 {
         let reader = Self::get_inner_reader(p);
 
         if reader.eof {

@@ -17,7 +17,7 @@ pub unsafe extern "C" fn Ppmd8_Flush_RangeEnc(mut p: *mut CPpmd8) {
     while i < 4 as std::ffi::c_int as std::ffi::c_uint {
         ((*(*p).Stream.Out).Write).expect("non-null function pointer")(
             (*p).Stream.Out,
-            ((*p).Low >> 24 as std::ffi::c_int) as Byte,
+            ((*p).Low >> 24 as std::ffi::c_int) as u8,
         );
         i = i.wrapping_add(1);
         i;
@@ -27,9 +27,9 @@ pub unsafe extern "C" fn Ppmd8_Flush_RangeEnc(mut p: *mut CPpmd8) {
 #[inline(always)]
 unsafe extern "C" fn Ppmd8_RangeEnc_Encode(
     mut p: *mut CPpmd8,
-    mut start: UInt32,
-    mut size: UInt32,
-    mut total: UInt32,
+    mut start: u32,
+    mut size: u32,
+    mut total: u32,
 ) {
     (*p).Range = (*p).Range / total;
     (*p).Low = ((*p).Low).wrapping_add(start * (*p).Range);
@@ -37,35 +37,30 @@ unsafe extern "C" fn Ppmd8_RangeEnc_Encode(
 }
 
 pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std::ffi::c_int) {
-    let mut charMask: [size_t; 32] = [0; 32];
+    let mut charMask: [usize; 32] = [0; 32];
     if (*(*p).MinContext).NumStats as std::ffi::c_int != 0 as std::ffi::c_int {
         let mut s: *mut CPpmd_State = ((*p).Base).offset((*(*p).MinContext).Union4.Stats as isize)
             as *mut std::ffi::c_void as *mut CPpmd_State;
-        let mut sum: UInt32 = 0;
+        let mut sum: u32 = 0;
         let mut i: std::ffi::c_uint = 0;
-        let mut summFreq: UInt32 = (*(*p).MinContext).Union2.SummFreq as UInt32;
+        let mut summFreq: u32 = (*(*p).MinContext).Union2.SummFreq as u32;
         if summFreq > (*p).Range {
             summFreq = (*p).Range;
         }
         if (*s).Symbol as std::ffi::c_int == symbol {
-            Ppmd8_RangeEnc_Encode(
-                p,
-                0 as std::ffi::c_int as UInt32,
-                (*s).Freq as UInt32,
-                summFreq,
-            );
+            Ppmd8_RangeEnc_Encode(p, 0 as std::ffi::c_int as u32, (*s).Freq as u32, summFreq);
             while (*p).Low ^ ((*p).Low).wrapping_add((*p).Range)
-                < (1 as std::ffi::c_int as UInt32) << 24 as std::ffi::c_int
-                || (*p).Range < (1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int && {
-                    (*p).Range = (0 as std::ffi::c_int as UInt32).wrapping_sub((*p).Low)
-                        & ((1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int)
-                            .wrapping_sub(1 as std::ffi::c_int as UInt32);
+                < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int
+                || (*p).Range < (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int && {
+                    (*p).Range = (0 as std::ffi::c_int as u32).wrapping_sub((*p).Low)
+                        & ((1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int)
+                            .wrapping_sub(1 as std::ffi::c_int as u32);
                     1 as std::ffi::c_int != 0
                 }
             {
                 ((*(*p).Stream.Out).Write).expect("non-null function pointer")(
                     (*p).Stream.Out,
-                    ((*p).Low >> 24 as std::ffi::c_int) as Byte,
+                    ((*p).Low >> 24 as std::ffi::c_int) as u8,
                 );
                 (*p).Range <<= 8 as std::ffi::c_int;
                 (*p).Low <<= 8 as std::ffi::c_int;
@@ -75,24 +70,24 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
             return;
         }
         (*p).PrevSuccess = 0 as std::ffi::c_int as std::ffi::c_uint;
-        sum = (*s).Freq as UInt32;
+        sum = (*s).Freq as u32;
         i = (*(*p).MinContext).NumStats as std::ffi::c_uint;
         loop {
             s = s.offset(1);
             if (*s).Symbol as std::ffi::c_int == symbol {
-                Ppmd8_RangeEnc_Encode(p, sum, (*s).Freq as UInt32, summFreq);
+                Ppmd8_RangeEnc_Encode(p, sum, (*s).Freq as u32, summFreq);
                 while (*p).Low ^ ((*p).Low).wrapping_add((*p).Range)
-                    < (1 as std::ffi::c_int as UInt32) << 24 as std::ffi::c_int
-                    || (*p).Range < (1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int && {
-                        (*p).Range = (0 as std::ffi::c_int as UInt32).wrapping_sub((*p).Low)
-                            & ((1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int)
-                                .wrapping_sub(1 as std::ffi::c_int as UInt32);
+                    < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int
+                    || (*p).Range < (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int && {
+                        (*p).Range = (0 as std::ffi::c_int as u32).wrapping_sub((*p).Low)
+                            & ((1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int)
+                                .wrapping_sub(1 as std::ffi::c_int as u32);
                         1 as std::ffi::c_int != 0
                     }
                 {
                     ((*(*p).Stream.Out).Write).expect("non-null function pointer")(
                         (*p).Stream.Out,
-                        ((*p).Low >> 24 as std::ffi::c_int) as Byte,
+                        ((*p).Low >> 24 as std::ffi::c_int) as u8,
                     );
                     (*p).Range <<= 8 as std::ffi::c_int;
                     (*p).Low <<= 8 as std::ffi::c_int;
@@ -101,58 +96,56 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
                 Ppmd8_Update1(p);
                 return;
             }
-            sum = sum.wrapping_add((*s).Freq as UInt32);
+            sum = sum.wrapping_add((*s).Freq as u32);
             i = i.wrapping_sub(1);
             if !(i != 0) {
                 break;
             }
         }
         Ppmd8_RangeEnc_Encode(p, sum, summFreq.wrapping_sub(sum), summFreq);
-        let mut z: size_t = 0;
-        z = 0 as std::ffi::c_int as size_t;
-        while z < 256usize.wrapping_div(::core::mem::size_of::<size_t>()) {
-            charMask[z.wrapping_add(0 as std::ffi::c_int as size_t) as usize] =
-                !(0 as std::ffi::c_int as size_t);
-            charMask[z.wrapping_add(1 as std::ffi::c_int as size_t) as usize] =
-                charMask[z.wrapping_add(0 as std::ffi::c_int as size_t) as usize];
-            charMask[z.wrapping_add(2 as std::ffi::c_int as size_t) as usize] =
-                charMask[z.wrapping_add(1 as std::ffi::c_int as size_t) as usize];
-            charMask[z.wrapping_add(3 as std::ffi::c_int as size_t) as usize] =
-                charMask[z.wrapping_add(2 as std::ffi::c_int as size_t) as usize];
-            charMask[z.wrapping_add(4 as std::ffi::c_int as size_t) as usize] =
-                charMask[z.wrapping_add(3 as std::ffi::c_int as size_t) as usize];
-            charMask[z.wrapping_add(5 as std::ffi::c_int as size_t) as usize] =
-                charMask[z.wrapping_add(4 as std::ffi::c_int as size_t) as usize];
-            charMask[z.wrapping_add(6 as std::ffi::c_int as size_t) as usize] =
-                charMask[z.wrapping_add(5 as std::ffi::c_int as size_t) as usize];
-            charMask[z.wrapping_add(7 as std::ffi::c_int as size_t) as usize] =
-                charMask[z.wrapping_add(6 as std::ffi::c_int as size_t) as usize];
-            z = z.wrapping_add(8 as std::ffi::c_int as size_t);
+        let mut z: usize = 0;
+        z = 0 as std::ffi::c_int as usize;
+        while z < 256usize.wrapping_div(::core::mem::size_of::<usize>()) {
+            charMask[z.wrapping_add(0 as std::ffi::c_int as usize) as usize] =
+                !(0 as std::ffi::c_int as usize);
+            charMask[z.wrapping_add(1 as std::ffi::c_int as usize) as usize] =
+                charMask[z.wrapping_add(0 as std::ffi::c_int as usize) as usize];
+            charMask[z.wrapping_add(2 as std::ffi::c_int as usize) as usize] =
+                charMask[z.wrapping_add(1 as std::ffi::c_int as usize) as usize];
+            charMask[z.wrapping_add(3 as std::ffi::c_int as usize) as usize] =
+                charMask[z.wrapping_add(2 as std::ffi::c_int as usize) as usize];
+            charMask[z.wrapping_add(4 as std::ffi::c_int as usize) as usize] =
+                charMask[z.wrapping_add(3 as std::ffi::c_int as usize) as usize];
+            charMask[z.wrapping_add(5 as std::ffi::c_int as usize) as usize] =
+                charMask[z.wrapping_add(4 as std::ffi::c_int as usize) as usize];
+            charMask[z.wrapping_add(6 as std::ffi::c_int as usize) as usize] =
+                charMask[z.wrapping_add(5 as std::ffi::c_int as usize) as usize];
+            charMask[z.wrapping_add(7 as std::ffi::c_int as usize) as usize] =
+                charMask[z.wrapping_add(6 as std::ffi::c_int as usize) as usize];
+            z = z.wrapping_add(8 as std::ffi::c_int as usize);
         }
         let mut s2: *mut CPpmd_State = ((*p).Base).offset((*(*p).MinContext).Union4.Stats as isize)
             as *mut std::ffi::c_void as *mut CPpmd_State;
-        *(charMask.as_mut_ptr() as *mut Byte).offset((*s).Symbol as isize) =
-            0 as std::ffi::c_int as Byte;
+        *(charMask.as_mut_ptr() as *mut u8).offset((*s).Symbol as isize) =
+            0 as std::ffi::c_int as u8;
         loop {
             let sym0: std::ffi::c_uint =
                 (*s2.offset(0 as std::ffi::c_int as isize)).Symbol as std::ffi::c_uint;
             let sym1: std::ffi::c_uint =
                 (*s2.offset(1 as std::ffi::c_int as isize)).Symbol as std::ffi::c_uint;
             s2 = s2.offset(2 as std::ffi::c_int as isize);
-            *(charMask.as_mut_ptr() as *mut Byte).offset(sym0 as isize) =
-                0 as std::ffi::c_int as Byte;
-            *(charMask.as_mut_ptr() as *mut Byte).offset(sym1 as isize) =
-                0 as std::ffi::c_int as Byte;
+            *(charMask.as_mut_ptr() as *mut u8).offset(sym0 as isize) = 0 as std::ffi::c_int as u8;
+            *(charMask.as_mut_ptr() as *mut u8).offset(sym1 as isize) = 0 as std::ffi::c_int as u8;
             if !(s2 < s) {
                 break;
             }
         }
     } else {
-        let mut prob: *mut UInt16 = &mut *(*((*p).BinSumm).as_mut_ptr().offset(
+        let mut prob: *mut u16 = &mut *(*((*p).BinSumm).as_mut_ptr().offset(
             *((*p).NS2Indx).as_mut_ptr().offset(
                 ((*(&mut (*(*p).MinContext).Union2 as *mut C2RustUnnamed_0 as *mut CPpmd_State))
-                    .Freq as size_t)
-                    .wrapping_sub(1 as std::ffi::c_int as size_t) as isize,
+                    .Freq as usize)
+                    .wrapping_sub(1 as std::ffi::c_int as usize) as isize,
             ) as isize,
         ))
         .as_mut_ptr()
@@ -172,40 +165,38 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
                 )
                 .wrapping_add((*(*p).MinContext).Flags as std::ffi::c_int as std::ffi::c_uint)
                 as isize,
-        ) as *mut UInt16;
+        ) as *mut u16;
         let mut s_0: *mut CPpmd_State =
             &mut (*(*p).MinContext).Union2 as *mut C2RustUnnamed_0 as *mut CPpmd_State;
-        let mut pr: UInt32 = *prob as UInt32;
-        let bound: UInt32 = ((*p).Range >> 14 as std::ffi::c_int) * pr;
+        let mut pr: u32 = *prob as u32;
+        let bound: u32 = ((*p).Range >> 14 as std::ffi::c_int) * pr;
         pr = pr.wrapping_sub(
             pr.wrapping_add(
-                ((1 as std::ffi::c_int) << 7 as std::ffi::c_int - 2 as std::ffi::c_int) as UInt32,
+                ((1 as std::ffi::c_int) << 7 as std::ffi::c_int - 2 as std::ffi::c_int) as u32,
             ) >> 7 as std::ffi::c_int,
         );
         if (*s_0).Symbol as std::ffi::c_int == symbol {
-            *prob = pr.wrapping_add(((1 as std::ffi::c_int) << 7 as std::ffi::c_int) as UInt32)
-                as UInt16;
+            *prob = pr.wrapping_add(((1 as std::ffi::c_int) << 7 as std::ffi::c_int) as u32) as u16;
             (*p).Range = bound;
             while (*p).Low ^ ((*p).Low).wrapping_add((*p).Range)
-                < (1 as std::ffi::c_int as UInt32) << 24 as std::ffi::c_int
-                || (*p).Range < (1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int && {
-                    (*p).Range = (0 as std::ffi::c_int as UInt32).wrapping_sub((*p).Low)
-                        & ((1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int)
-                            .wrapping_sub(1 as std::ffi::c_int as UInt32);
+                < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int
+                || (*p).Range < (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int && {
+                    (*p).Range = (0 as std::ffi::c_int as u32).wrapping_sub((*p).Low)
+                        & ((1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int)
+                            .wrapping_sub(1 as std::ffi::c_int as u32);
                     1 as std::ffi::c_int != 0
                 }
             {
                 ((*(*p).Stream.Out).Write).expect("non-null function pointer")(
                     (*p).Stream.Out,
-                    ((*p).Low >> 24 as std::ffi::c_int) as Byte,
+                    ((*p).Low >> 24 as std::ffi::c_int) as u8,
                 );
                 (*p).Range <<= 8 as std::ffi::c_int;
                 (*p).Low <<= 8 as std::ffi::c_int;
             }
             let freq: std::ffi::c_uint = (*s_0).Freq as std::ffi::c_uint;
             let mut c: *mut CPpmd8_Context = ((*p).Base).offset(
-                ((*s_0).Successor_0 as UInt32
-                    | ((*s_0).Successor_1 as UInt32) << 16 as std::ffi::c_int)
+                ((*s_0).Successor_0 as u32 | ((*s_0).Successor_1 as u32) << 16 as std::ffi::c_int)
                     as isize,
             ) as *mut std::ffi::c_void
                 as *mut CPpmd8_Context;
@@ -216,9 +207,9 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
             (*s_0).Freq = freq.wrapping_add(
                 (freq < 196 as std::ffi::c_int as std::ffi::c_uint) as std::ffi::c_int
                     as std::ffi::c_uint,
-            ) as Byte;
+            ) as u8;
             if (*p).OrderFall == 0 as std::ffi::c_int as std::ffi::c_uint
-                && c as *const Byte >= (*p).UnitsStart as *const Byte
+                && c as *const u8 >= (*p).UnitsStart as *const u8
             {
                 (*p).MinContext = c;
                 (*p).MaxContext = (*p).MinContext;
@@ -227,58 +218,58 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
             }
             return;
         }
-        *prob = pr as UInt16;
+        *prob = pr as u16;
         (*p).InitEsc = (*p).ExpEscape[(pr >> 10 as std::ffi::c_int) as usize] as std::ffi::c_uint;
         (*p).Low = ((*p).Low).wrapping_add(bound);
         (*p).Range = ((*p).Range
-            & !(((1 as std::ffi::c_int) << 7 as std::ffi::c_int + 7 as std::ffi::c_int) as UInt32)
-                .wrapping_sub(1 as std::ffi::c_int as UInt32))
+            & !(((1 as std::ffi::c_int) << 7 as std::ffi::c_int + 7 as std::ffi::c_int) as u32)
+                .wrapping_sub(1 as std::ffi::c_int as u32))
         .wrapping_sub(bound);
-        let mut z_0: size_t = 0;
-        z_0 = 0 as std::ffi::c_int as size_t;
-        while z_0 < 256usize.wrapping_div(::core::mem::size_of::<size_t>()) {
-            charMask[z_0.wrapping_add(0 as std::ffi::c_int as size_t) as usize] =
-                !(0 as std::ffi::c_int as size_t);
-            charMask[z_0.wrapping_add(1 as std::ffi::c_int as size_t) as usize] =
-                charMask[z_0.wrapping_add(0 as std::ffi::c_int as size_t) as usize];
-            charMask[z_0.wrapping_add(2 as std::ffi::c_int as size_t) as usize] =
-                charMask[z_0.wrapping_add(1 as std::ffi::c_int as size_t) as usize];
-            charMask[z_0.wrapping_add(3 as std::ffi::c_int as size_t) as usize] =
-                charMask[z_0.wrapping_add(2 as std::ffi::c_int as size_t) as usize];
-            charMask[z_0.wrapping_add(4 as std::ffi::c_int as size_t) as usize] =
-                charMask[z_0.wrapping_add(3 as std::ffi::c_int as size_t) as usize];
-            charMask[z_0.wrapping_add(5 as std::ffi::c_int as size_t) as usize] =
-                charMask[z_0.wrapping_add(4 as std::ffi::c_int as size_t) as usize];
-            charMask[z_0.wrapping_add(6 as std::ffi::c_int as size_t) as usize] =
-                charMask[z_0.wrapping_add(5 as std::ffi::c_int as size_t) as usize];
-            charMask[z_0.wrapping_add(7 as std::ffi::c_int as size_t) as usize] =
-                charMask[z_0.wrapping_add(6 as std::ffi::c_int as size_t) as usize];
-            z_0 = z_0.wrapping_add(8 as std::ffi::c_int as size_t);
+        let mut z_0: usize = 0;
+        z_0 = 0 as std::ffi::c_int as usize;
+        while z_0 < 256usize.wrapping_div(::core::mem::size_of::<usize>()) {
+            charMask[z_0.wrapping_add(0 as std::ffi::c_int as usize) as usize] =
+                !(0 as std::ffi::c_int as usize);
+            charMask[z_0.wrapping_add(1 as std::ffi::c_int as usize) as usize] =
+                charMask[z_0.wrapping_add(0 as std::ffi::c_int as usize) as usize];
+            charMask[z_0.wrapping_add(2 as std::ffi::c_int as usize) as usize] =
+                charMask[z_0.wrapping_add(1 as std::ffi::c_int as usize) as usize];
+            charMask[z_0.wrapping_add(3 as std::ffi::c_int as usize) as usize] =
+                charMask[z_0.wrapping_add(2 as std::ffi::c_int as usize) as usize];
+            charMask[z_0.wrapping_add(4 as std::ffi::c_int as usize) as usize] =
+                charMask[z_0.wrapping_add(3 as std::ffi::c_int as usize) as usize];
+            charMask[z_0.wrapping_add(5 as std::ffi::c_int as usize) as usize] =
+                charMask[z_0.wrapping_add(4 as std::ffi::c_int as usize) as usize];
+            charMask[z_0.wrapping_add(6 as std::ffi::c_int as usize) as usize] =
+                charMask[z_0.wrapping_add(5 as std::ffi::c_int as usize) as usize];
+            charMask[z_0.wrapping_add(7 as std::ffi::c_int as usize) as usize] =
+                charMask[z_0.wrapping_add(6 as std::ffi::c_int as usize) as usize];
+            z_0 = z_0.wrapping_add(8 as std::ffi::c_int as usize);
         }
-        *(charMask.as_mut_ptr() as *mut Byte).offset((*s_0).Symbol as isize) =
-            0 as std::ffi::c_int as Byte;
+        *(charMask.as_mut_ptr() as *mut u8).offset((*s_0).Symbol as isize) =
+            0 as std::ffi::c_int as u8;
         (*p).PrevSuccess = 0 as std::ffi::c_int as std::ffi::c_uint;
     }
     loop {
         let mut see: *mut CPpmd_See = 0 as *mut CPpmd_See;
         let mut s_1: *mut CPpmd_State = 0 as *mut CPpmd_State;
-        let mut sum_0: UInt32 = 0;
-        let mut escFreq: UInt32 = 0;
+        let mut sum_0: u32 = 0;
+        let mut escFreq: u32 = 0;
         let mut mc: *mut CPpmd8_Context = 0 as *mut CPpmd8_Context;
         let mut i_0: std::ffi::c_uint = 0;
         let mut numMasked: std::ffi::c_uint = 0;
         while (*p).Low ^ ((*p).Low).wrapping_add((*p).Range)
-            < (1 as std::ffi::c_int as UInt32) << 24 as std::ffi::c_int
-            || (*p).Range < (1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int && {
-                (*p).Range = (0 as std::ffi::c_int as UInt32).wrapping_sub((*p).Low)
-                    & ((1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int)
-                        .wrapping_sub(1 as std::ffi::c_int as UInt32);
+            < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int
+            || (*p).Range < (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int && {
+                (*p).Range = (0 as std::ffi::c_int as u32).wrapping_sub((*p).Low)
+                    & ((1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int)
+                        .wrapping_sub(1 as std::ffi::c_int as u32);
                 1 as std::ffi::c_int != 0
             }
         {
             ((*(*p).Stream.Out).Write).expect("non-null function pointer")(
                 (*p).Stream.Out,
-                ((*p).Low >> 24 as std::ffi::c_int) as Byte,
+                ((*p).Low >> 24 as std::ffi::c_int) as u8,
             );
             (*p).Range <<= 8 as std::ffi::c_int;
             (*p).Low <<= 8 as std::ffi::c_int;
@@ -301,31 +292,30 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
         see = Ppmd8_MakeEscFreq(p, numMasked, &mut escFreq);
         s_1 = ((*p).Base).offset((*(*p).MinContext).Union4.Stats as isize) as *mut std::ffi::c_void
             as *mut CPpmd_State;
-        sum_0 = 0 as std::ffi::c_int as UInt32;
+        sum_0 = 0 as std::ffi::c_int as u32;
         i_0 = ((*(*p).MinContext).NumStats as std::ffi::c_uint)
             .wrapping_add(1 as std::ffi::c_int as std::ffi::c_uint);
         loop {
             let cur: std::ffi::c_uint = (*s_1).Symbol as std::ffi::c_uint;
             if cur as std::ffi::c_int == symbol {
-                let low: UInt32 = sum_0;
-                let freq_0: UInt32 = (*s_1).Freq as UInt32;
+                let low: u32 = sum_0;
+                let freq_0: u32 = (*s_1).Freq as u32;
                 let mut num2: std::ffi::c_uint = 0;
                 if ((*see).Shift as std::ffi::c_int) < 7 as std::ffi::c_int && {
                     (*see).Count = ((*see).Count).wrapping_sub(1);
                     (*see).Count as std::ffi::c_int == 0 as std::ffi::c_int
                 } {
-                    (*see).Summ =
-                        (((*see).Summ as std::ffi::c_int) << 1 as std::ffi::c_int) as UInt16;
+                    (*see).Summ = (((*see).Summ as std::ffi::c_int) << 1 as std::ffi::c_int) as u16;
                     let fresh0 = (*see).Shift;
                     (*see).Shift = ((*see).Shift).wrapping_add(1);
-                    (*see).Count = ((3 as std::ffi::c_int) << fresh0 as std::ffi::c_int) as Byte;
+                    (*see).Count = ((3 as std::ffi::c_int) << fresh0 as std::ffi::c_int) as u8;
                 }
                 (*p).FoundState = s_1;
                 sum_0 = sum_0.wrapping_add(escFreq);
                 num2 = i_0.wrapping_div(2 as std::ffi::c_int as std::ffi::c_uint);
                 i_0 &= 1 as std::ffi::c_int as std::ffi::c_uint;
                 sum_0 =
-                    sum_0.wrapping_add(freq_0 & (0 as std::ffi::c_int as UInt32).wrapping_sub(i_0));
+                    sum_0.wrapping_add(freq_0 & (0 as std::ffi::c_int as u32).wrapping_sub(i_0));
                 if num2 != 0 as std::ffi::c_int as std::ffi::c_uint {
                     s_1 = s_1.offset(i_0 as isize);
                     loop {
@@ -337,15 +327,15 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
                         sum_0 = (sum_0 as std::ffi::c_uint).wrapping_add(
                             (*s_1.offset(-(2 as std::ffi::c_int) as isize)).Freq
                                 as std::ffi::c_uint
-                                & *(charMask.as_mut_ptr() as *mut Byte).offset(sym0_0 as isize)
+                                & *(charMask.as_mut_ptr() as *mut u8).offset(sym0_0 as isize)
                                     as std::ffi::c_uint,
-                        ) as UInt32 as UInt32;
+                        ) as u32 as u32;
                         sum_0 = (sum_0 as std::ffi::c_uint).wrapping_add(
                             (*s_1.offset(-(1 as std::ffi::c_int) as isize)).Freq
                                 as std::ffi::c_uint
-                                & *(charMask.as_mut_ptr() as *mut Byte).offset(sym1_0 as isize)
+                                & *(charMask.as_mut_ptr() as *mut u8).offset(sym1_0 as isize)
                                     as std::ffi::c_uint,
-                        ) as UInt32 as UInt32;
+                        ) as u32 as u32;
                         num2 = num2.wrapping_sub(1);
                         if !(num2 != 0) {
                             break;
@@ -357,17 +347,17 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
                 }
                 Ppmd8_RangeEnc_Encode(p, low, freq_0, sum_0);
                 while (*p).Low ^ ((*p).Low).wrapping_add((*p).Range)
-                    < (1 as std::ffi::c_int as UInt32) << 24 as std::ffi::c_int
-                    || (*p).Range < (1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int && {
-                        (*p).Range = (0 as std::ffi::c_int as UInt32).wrapping_sub((*p).Low)
-                            & ((1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int)
-                                .wrapping_sub(1 as std::ffi::c_int as UInt32);
+                    < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int
+                    || (*p).Range < (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int && {
+                        (*p).Range = (0 as std::ffi::c_int as u32).wrapping_sub((*p).Low)
+                            & ((1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int)
+                                .wrapping_sub(1 as std::ffi::c_int as u32);
                         1 as std::ffi::c_int != 0
                     }
                 {
                     ((*(*p).Stream.Out).Write).expect("non-null function pointer")(
                         (*p).Stream.Out,
-                        ((*p).Low >> 24 as std::ffi::c_int) as Byte,
+                        ((*p).Low >> 24 as std::ffi::c_int) as u8,
                     );
                     (*p).Range <<= 8 as std::ffi::c_int;
                     (*p).Low <<= 8 as std::ffi::c_int;
@@ -377,9 +367,8 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
             }
             sum_0 = (sum_0 as std::ffi::c_uint).wrapping_add(
                 (*s_1).Freq as std::ffi::c_uint
-                    & *(charMask.as_mut_ptr() as *mut Byte).offset(cur as isize)
-                        as std::ffi::c_uint,
-            ) as UInt32 as UInt32;
+                    & *(charMask.as_mut_ptr() as *mut u8).offset(cur as isize) as std::ffi::c_uint,
+            ) as u32 as u32;
             s_1 = s_1.offset(1);
             s_1;
             i_0 = i_0.wrapping_sub(1);
@@ -387,8 +376,8 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
                 break;
             }
         }
-        let mut total: UInt32 = sum_0.wrapping_add(escFreq);
-        (*see).Summ = ((*see).Summ as UInt32).wrapping_add(total) as UInt16;
+        let mut total: u32 = sum_0.wrapping_add(escFreq);
+        (*see).Summ = ((*see).Summ as u32).wrapping_add(total) as u16;
         if total > (*p).Range {
             total = (*p).Range;
         }
@@ -398,18 +387,18 @@ pub unsafe extern "C" fn Ppmd8_EncodeSymbol(mut p: *mut CPpmd8, mut symbol: std:
             as *mut std::ffi::c_void as *mut CPpmd_State;
         s_1 = s_1.offset(-1);
         s_1;
-        *(charMask.as_mut_ptr() as *mut Byte).offset((*s_1).Symbol as isize) =
-            0 as std::ffi::c_int as Byte;
+        *(charMask.as_mut_ptr() as *mut u8).offset((*s_1).Symbol as isize) =
+            0 as std::ffi::c_int as u8;
         loop {
             let sym0_1: std::ffi::c_uint =
                 (*s2_0.offset(0 as std::ffi::c_int as isize)).Symbol as std::ffi::c_uint;
             let sym1_1: std::ffi::c_uint =
                 (*s2_0.offset(1 as std::ffi::c_int as isize)).Symbol as std::ffi::c_uint;
             s2_0 = s2_0.offset(2 as std::ffi::c_int as isize);
-            *(charMask.as_mut_ptr() as *mut Byte).offset(sym0_1 as isize) =
-                0 as std::ffi::c_int as Byte;
-            *(charMask.as_mut_ptr() as *mut Byte).offset(sym1_1 as isize) =
-                0 as std::ffi::c_int as Byte;
+            *(charMask.as_mut_ptr() as *mut u8).offset(sym0_1 as isize) =
+                0 as std::ffi::c_int as u8;
+            *(charMask.as_mut_ptr() as *mut u8).offset(sym1_1 as isize) =
+                0 as std::ffi::c_int as u8;
             if !(s2_0 < s_1 as *const CPpmd_State) {
                 break;
             }
