@@ -1,6 +1,6 @@
 use crate::{
     native::{
-        internal::ppmd7::{alloc, construct, free, Init, Ppmd7},
+        internal::ppmd7::{alloc, construct, free, Init, PPMd7},
         internal::ppmd7dec::{decode_symbol, range_decoder_init},
     },
     PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
@@ -13,7 +13,7 @@ use crate::Error;
 
 /// A decoder to decompress data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Decoder<R: Read> {
-    ppmd: Ppmd7,
+    ppmd: PPMd7,
     reader: ByteReader<R>,
     memory: Memory,
     finished: bool,
@@ -31,7 +31,7 @@ impl<R: Read> Ppmd7Decoder<R> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<Ppmd7>() };
+        let mut ppmd = unsafe { std::mem::zeroed::<PPMd7>() };
         unsafe { construct(&mut ppmd) };
 
         let mut memory = Memory::new(mem_size);

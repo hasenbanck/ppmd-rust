@@ -1,6 +1,6 @@
 use crate::{
     native::{
-        internal::ppmd7::{alloc, construct, free, Init, Ppmd7},
+        internal::ppmd7::{alloc, construct, free, Init, PPMd7},
         internal::ppmd7enc::{encode_symbol, range_encoder_flush, range_encoder_init},
     },
     PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
@@ -14,7 +14,7 @@ use crate::Error;
 
 /// An encoder to compress data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Encoder<W: Write> {
-    ppmd: Ppmd7,
+    ppmd: PPMd7,
     writer: ByteWriter<W>,
     memory: Memory,
 }
@@ -31,7 +31,7 @@ impl<W: Write> Ppmd7Encoder<W> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<Ppmd7>() };
+        let mut ppmd = unsafe { std::mem::zeroed::<PPMd7>() };
         unsafe { construct(&mut ppmd) };
 
         let mut memory = Memory::new(mem_size);

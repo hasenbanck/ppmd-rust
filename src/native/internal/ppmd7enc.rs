@@ -1,7 +1,7 @@
 use super::ppmd7::*;
 use super::*;
 
-pub unsafe fn range_encoder_init(p: *mut Ppmd7) {
+pub unsafe fn range_encoder_init(p: *mut PPMd7) {
     (*p).rc.enc.low = 0 as std::ffi::c_int as u64;
     (*p).rc.enc.range = 0xFFFFFFFF as std::ffi::c_uint;
     (*p).rc.enc.cache = 0 as std::ffi::c_int as u8;
@@ -9,7 +9,7 @@ pub unsafe fn range_encoder_init(p: *mut Ppmd7) {
 }
 
 #[inline(never)]
-unsafe fn range_encoder_shift_low(p: *mut Ppmd7) {
+unsafe fn range_encoder_shift_low(p: *mut PPMd7) {
     if ((*p).rc.enc.low as u32) < 0xFF000000 as std::ffi::c_uint || ((*p).rc.enc.low >> 32) != 0 {
         let mut temp: u8 = (*p).rc.enc.cache;
         loop {
@@ -31,12 +31,12 @@ unsafe fn range_encoder_shift_low(p: *mut Ppmd7) {
 }
 
 #[inline(always)]
-unsafe fn range_encoder_encode(p: *mut Ppmd7, start: u32, size: u32) {
+unsafe fn range_encoder_encode(p: *mut PPMd7, start: u32, size: u32) {
     (*p).rc.enc.low = ((*p).rc.enc.low).wrapping_add((start * (*p).rc.enc.range) as u64);
     (*p).rc.enc.range = (*p).rc.enc.range * size;
 }
 
-pub unsafe fn range_encoder_flush(p: *mut Ppmd7) {
+pub unsafe fn range_encoder_flush(p: *mut PPMd7) {
     let mut i: std::ffi::c_uint = 0;
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
     while i < 5 as std::ffi::c_int as std::ffi::c_uint {
@@ -47,7 +47,7 @@ pub unsafe fn range_encoder_flush(p: *mut Ppmd7) {
 }
 
 #[inline(always)]
-pub unsafe fn encode_symbol(p: *mut Ppmd7, symbol: std::ffi::c_int) {
+pub unsafe fn encode_symbol(p: *mut PPMd7, symbol: std::ffi::c_int) {
     let mut charMask: [usize; 32] = [0; 32];
     if (*(*p).min_context).num_stats as std::ffi::c_int != 1 as std::ffi::c_int {
         let mut s: *mut State = ((*p).base).offset((*(*p).min_context).union4.stats as isize)
