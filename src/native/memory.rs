@@ -14,8 +14,8 @@ impl Memory {
     pub(crate) fn new(size: u32) -> Self {
         let memory = Box::new(MemoryInner {
             alloc: ISzAlloc {
-                Alloc: Some(Memory::alloc),
-                Free: Some(Memory::free),
+                alloc: Some(Memory::alloc),
+                free: Some(Memory::free),
             },
             data: vec![0; size as usize],
         });
@@ -34,13 +34,13 @@ impl Memory {
         unsafe { &mut *(p as *mut MemoryInner) }
     }
 
-    unsafe extern "C" fn alloc(p: ISzAllocPtr, size: usize) -> *mut std::os::raw::c_void {
+    fn alloc(p: ISzAllocPtr, size: usize) -> *mut std::os::raw::c_void {
         let memory = Self::get_inner_memory(p);
         assert_eq!(size, memory.data.len());
         memory.data.as_mut_ptr() as *mut std::os::raw::c_void
     }
 
-    unsafe extern "C" fn free(p: ISzAllocPtr, address: *mut std::os::raw::c_void) {
+    fn free(p: ISzAllocPtr, address: *mut std::os::raw::c_void) {
         if address.is_null() {
             return;
         }

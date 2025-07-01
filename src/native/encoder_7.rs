@@ -1,9 +1,7 @@
 use crate::{
     native::{
-        internal::ppmd7::{CPpmd7, Ppmd7_Alloc, Ppmd7_Construct, Ppmd7_Free, Ppmd7_Init},
-        internal::ppmd7enc::{
-            Ppmd7z_EncodeSymbol, Ppmd7z_EncodeSymbols, Ppmd7z_Flush_RangeEnc, Ppmd7z_Init_RangeEnc,
-        },
+        internal::ppmd7::{alloc, construct, free, Init, Ppmd7},
+        internal::ppmd7enc::{encode_symbol, range_encoder_flush, range_encoder_init},
     },
     PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
@@ -16,7 +14,7 @@ use crate::Error;
 
 /// An encoder to compress data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Encoder<W: Write> {
-    ppmd: CPpmd7,
+    ppmd: Ppmd7,
     writer: ByteWriter<W>,
     memory: Memory,
 }
@@ -33,12 +31,12 @@ impl<W: Write> Ppmd7Encoder<W> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<CPpmd7>() };
-        unsafe { Ppmd7_Construct(&mut ppmd) };
+        let mut ppmd = unsafe { std::mem::zeroed::<Ppmd7>() };
+        unsafe { construct(&mut ppmd) };
 
         let mut memory = Memory::new(mem_size);
 
-        let success = unsafe { Ppmd7_Alloc(&mut ppmd, mem_size, memory.allocation()) };
+        let success = unsafe { alloc(&mut ppmd, mem_size, memory.allocation()) };
 
         if success == 0 {
             return Err(Error::MemoryAllocation);
@@ -46,10 +44,10 @@ impl<W: Write> Ppmd7Encoder<W> {
 
         let mut writer = ByteWriter::new(writer);
         let range_encoder = unsafe { &mut ppmd.rc.enc };
-        range_encoder.Stream = writer.byte_out_ptr();
+        range_encoder.stream = writer.byte_out_ptr();
 
-        unsafe { Ppmd7z_Init_RangeEnc(&mut ppmd) };
-        unsafe { Ppmd7_Init(&mut ppmd, order) };
+        unsafe { range_encoder_init(&mut ppmd) };
+        unsafe { Init(&mut ppmd, order) };
 
         Ok(Self {
             ppmd,
@@ -62,7 +60,7 @@ impl<W: Write> Ppmd7Encoder<W> {
     pub fn into_inner(self) -> W {
         let mut manual_drop_self = ManuallyDrop::new(self);
         unsafe {
-            Ppmd7_Free(
+            free(
                 &mut manual_drop_self.ppmd,
                 manual_drop_self.memory.allocation(),
             )
@@ -77,7 +75,7 @@ impl<W: Write> Ppmd7Encoder<W> {
     pub fn finish(mut self, with_end_marker: bool) -> Result<W, std::io::Error> {
         unsafe {
             if with_end_marker {
-                Ppmd7z_EncodeSymbol(&mut self.ppmd, SYM_END);
+                encode_symbol(&mut self.ppmd, SYM_END);
             }
             self.flush()?;
             Ok(self.into_inner())
@@ -85,7 +83,7 @@ impl<W: Write> Ppmd7Encoder<W> {
     }
 
     fn inner_flush(&mut self) {
-        unsafe { Ppmd7z_Flush_RangeEnc(&mut self.ppmd) };
+        unsafe { range_encoder_flush(&mut self.ppmd) };
         self.writer.flush();
     }
 }
@@ -96,8 +94,9 @@ impl<W: Write> Write for Ppmd7Encoder<W> {
             return Ok(0);
         }
 
-        let pointer_range = buf.as_ptr_range();
-        unsafe { Ppmd7z_EncodeSymbols(&mut self.ppmd, pointer_range.start, pointer_range.end) };
+        for &byte in buf.iter() {
+            unsafe { encode_symbol(&mut self.ppmd, byte as i32) };
+        }
 
         Ok(buf.len())
     }
@@ -122,7 +121,7 @@ mod test {
     fn ppmd7encoder_init_drop() {
         let writer = Vec::new();
         let encoder = Ppmd7Encoder::new(writer, ORDER, MEM_SIZE).unwrap();
-        assert!(!encoder.ppmd.Base.is_null());
+        assert!(!encoder.ppmd.base.is_null());
     }
 
     #[test]
