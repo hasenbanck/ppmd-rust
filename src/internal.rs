@@ -1,9 +1,6 @@
-pub mod ppmd7;
-pub mod ppmd7dec;
-pub mod ppmd7enc;
-pub mod ppmd8;
-pub mod ppmd8dec;
-pub mod ppmd8enc;
+pub(crate) mod ppmd7;
+
+pub(crate) mod ppmd8;
 
 #[derive(Copy, Clone)]
 #[repr(C)]

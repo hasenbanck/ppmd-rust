@@ -1,3 +1,9 @@
+mod decoder;
+mod encoder;
+
+pub use decoder::*;
+pub use encoder::*;
+
 use super::*;
 use crate::RestoreMethod;
 
@@ -154,11 +160,7 @@ pub unsafe fn alloc(p: *mut Ppmd8, size: u32, alloc: ISzAllocPtr) -> i32 {
     return 1 as std::ffi::c_int;
 }
 
-unsafe fn insert_node(
-    p: *mut Ppmd8,
-    node: *mut std::ffi::c_void,
-    indx: std::ffi::c_uint,
-) {
+unsafe fn insert_node(p: *mut Ppmd8, node: *mut std::ffi::c_void, indx: std::ffi::c_uint) {
     (*(node as *mut Node)).stamp = 0xFFFFFFFF as std::ffi::c_uint;
     (*(node as *mut Node)).next = (*p).free_list[indx as usize];
     (*(node as *mut Node)).nu = (*p).index2units[indx as usize] as std::ffi::c_uint;
@@ -583,11 +585,7 @@ unsafe fn restart_model(p: *mut Ppmd8) {
     (*p).dummy_see.count = 64 as std::ffi::c_int as u8;
 }
 
-pub unsafe fn init(
-    p: *mut Ppmd8,
-    maxOrder: std::ffi::c_uint,
-    restoreMethod: std::ffi::c_uint,
-) {
+pub unsafe fn init(p: *mut Ppmd8, maxOrder: std::ffi::c_uint, restoreMethod: std::ffi::c_uint) {
     (*p).max_order = maxOrder;
     (*p).restore_method = restoreMethod;
     restart_model(p);
@@ -1000,15 +998,14 @@ unsafe fn create_successors(
         s0 = ((*c).union2.summ_freq as u32)
             .wrapping_sub((*c).num_stats as u32)
             .wrapping_sub(cf);
-        newFreq = (1 as std::ffi::c_int as u32).wrapping_add(
-            if 2 as std::ffi::c_int as u32 * cf <= s0 {
+        newFreq =
+            (1 as std::ffi::c_int as u32).wrapping_add(if 2 as std::ffi::c_int as u32 * cf <= s0 {
                 (5 as std::ffi::c_int as u32 * cf > s0) as std::ffi::c_int as u32
             } else {
                 cf.wrapping_add(2 as std::ffi::c_int as u32 * s0)
                     .wrapping_sub(3 as std::ffi::c_int as u32)
                     / s0
-            },
-        ) as u8;
+            }) as u8;
     }
     loop {
         let mut c1: *mut Context = 0 as *mut Context;
@@ -1208,8 +1205,7 @@ pub unsafe fn update_model(p: *mut Ppmd8) {
     } else if (((*p).base).offset(minSuccessor as isize) as *mut std::ffi::c_void as *mut u8)
         < (*p).units_start
     {
-        let cs_1: *mut Context =
-            create_successors(p, 0 as std::ffi::c_int, s, (*p).min_context);
+        let cs_1: *mut Context = create_successors(p, 0 as std::ffi::c_int, s, (*p).min_context);
         if cs_1.is_null() {
             restore_model(p, c);
             return;

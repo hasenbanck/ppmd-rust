@@ -1,37 +1,39 @@
+use std::{io::Read, mem::ManuallyDrop};
+
 use crate::{
-    native::{
-        internal::ppmd7::{alloc, construct, free, Init, PPMd7},
-        internal::ppmd7dec::{decode_symbol, range_decoder_init},
-    },
-    PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
+    byte_reader::ByteReader,
+    internal::ppmd8::{alloc, construct, decode_symbol, free, init, range_decoder_init, Ppmd8},
+    memory::Memory,
+    Error, RestoreMethod, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER,
+    SYM_END,
 };
-use std::io::Read;
-use std::mem::ManuallyDrop;
 
-use super::{byte_reader::ByteReader, memory::Memory};
-use crate::Error;
-
-/// A decoder to decompress data using PPMd7 (PPMdH) with the 7z range coder.
-pub struct Ppmd7Decoder<R: Read> {
-    ppmd: PPMd7,
+/// A decoder to decompress data using PPMd8 (PPMdI rev.1).
+pub struct Ppmd8Decoder<R: Read> {
+    ppmd: Ppmd8,
     reader: ByteReader<R>,
     memory: Memory,
     finished: bool,
 }
 
-impl<R: Read> Ppmd7Decoder<R> {
-    /// Creates a new [`Ppmd7Decoder`] which provides a reader over the uncompressed data.
+impl<R: Read> Ppmd8Decoder<R> {
+    /// Creates a new [`Ppmd8Decoder`] which provides a reader over the uncompressed data.
     ///
-    /// The given `order` must be between [`PPMD7_MIN_ORDER`] and [`PPMD7_MAX_ORDER`]
-    /// The given `mem_size` must be between [`PPMD7_MIN_MEM_SIZE`] and [`PPMD7_MAX_MEM_SIZE`]
-    pub fn new(reader: R, order: u32, mem_size: u32) -> crate::Result<Self> {
-        if !(PPMD7_MIN_ORDER..=PPMD7_MAX_ORDER).contains(&order)
-            || !(PPMD7_MIN_MEM_SIZE..=PPMD7_MAX_MEM_SIZE).contains(&mem_size)
+    /// The given `order` must be between [`PPMD8_MIN_ORDER`] and [`PPMD8_MAX_ORDER`] (inclusive).
+    /// The given `mem_size` must be between [`PPMD8_MIN_MEM_SIZE`] and [`PPMD8_MAX_MEM_SIZE`] (inclusive).
+    pub fn new(
+        reader: R,
+        order: u32,
+        mem_size: u32,
+        restore_method: RestoreMethod,
+    ) -> crate::Result<Self> {
+        if !(PPMD8_MIN_ORDER..=PPMD8_MAX_ORDER).contains(&order)
+            || !(PPMD8_MIN_MEM_SIZE..=PPMD8_MAX_MEM_SIZE).contains(&mem_size)
         {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<PPMd7>() };
+        let mut ppmd = unsafe { std::mem::zeroed::<Ppmd8>() };
         unsafe { construct(&mut ppmd) };
 
         let mut memory = Memory::new(mem_size);
@@ -43,16 +45,15 @@ impl<R: Read> Ppmd7Decoder<R> {
         }
 
         let mut reader = ByteReader::new(reader);
-        let range_decoder = unsafe { &mut ppmd.rc.dec };
-        range_decoder.stream = reader.byte_in_ptr();
+        ppmd.stream.input = reader.byte_in_ptr();
 
-        let success = unsafe { range_decoder_init(&mut ppmd.rc.dec) };
+        let success = unsafe { range_decoder_init(&mut ppmd) };
 
         if success == 0 {
             return Err(Error::RangeDecoderInitialization);
         }
 
-        unsafe { Init(&mut ppmd, order) };
+        unsafe { init(&mut ppmd, order, restore_method as _) };
 
         Ok(Self {
             ppmd,
@@ -76,13 +77,13 @@ impl<R: Read> Ppmd7Decoder<R> {
     }
 }
 
-impl<R: Read> Drop for Ppmd7Decoder<R> {
+impl<R: Read> Drop for Ppmd8Decoder<R> {
     fn drop(&mut self) {
         unsafe { free(&mut self.ppmd, self.memory.allocation()) }
     }
 }
 
-impl<R: Read> Read for Ppmd7Decoder<R> {
+impl<R: Read> Read for Ppmd8Decoder<R> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.finished {
             return Ok(0);
@@ -108,7 +109,7 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
             }
         }
 
-        let code = unsafe { self.ppmd.rc.dec.code };
+        let code = self.ppmd.code;
 
         if sym >= 0 {
             return Ok(decoded);
@@ -130,15 +131,16 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
 
 #[cfg(test)]
 mod test {
-    use super::Ppmd7Decoder;
+    use super::{Ppmd8Decoder, RestoreMethod};
 
     const ORDER: u32 = 8;
     const MEM_SIZE: u32 = 262144;
+    const RESTORE_METHOD: RestoreMethod = RestoreMethod::CutOff;
 
     #[test]
-    fn ppmd7decoder_init_drop() {
+    fn ppmd8zdecoder_init_drop() {
         let reader: &[u8] = &[];
-        let decoder = Ppmd7Decoder::new(reader, ORDER, MEM_SIZE).unwrap();
+        let decoder = Ppmd8Decoder::new(reader, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
         assert!(!decoder.ppmd.base.is_null());
     }
 }
