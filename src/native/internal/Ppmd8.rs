@@ -13,13 +13,13 @@ use super::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CPpmd8_Context_ {
-    pub NumStats: Byte,
-    pub Flags: Byte,
+    pub NumStats: u8,
+    pub Flags: u8,
     pub Union2: C2RustUnnamed_0,
     pub Union4: C2RustUnnamed,
     pub Suffix: CPpmd8_Context_Ref,
 }
-pub type CPpmd8_Context_Ref = UInt32;
+pub type CPpmd8_Context_Ref = u32;
 pub type CPpmd8_Context = CPpmd8_Context_;
 pub type C2RustUnnamed_1 = std::ffi::c_uint;
 pub const PPMD8_RESTORE_METHOD_UNSUPPPORTED: C2RustUnnamed_1 = 2;
@@ -36,30 +36,30 @@ pub struct CPpmd8 {
     pub PrevSuccess: std::ffi::c_uint,
     pub MaxOrder: std::ffi::c_uint,
     pub RestoreMethod: std::ffi::c_uint,
-    pub RunLength: Int32,
-    pub InitRL: Int32,
-    pub Size: UInt32,
-    pub GlueCount: UInt32,
-    pub AlignOffset: UInt32,
-    pub Base: *mut Byte,
-    pub LoUnit: *mut Byte,
-    pub HiUnit: *mut Byte,
-    pub Text: *mut Byte,
-    pub UnitsStart: *mut Byte,
-    pub Range: UInt32,
-    pub Code: UInt32,
-    pub Low: UInt32,
+    pub RunLength: i32,
+    pub InitRL: i32,
+    pub Size: u32,
+    pub GlueCount: u32,
+    pub AlignOffset: u32,
+    pub Base: *mut u8,
+    pub LoUnit: *mut u8,
+    pub HiUnit: *mut u8,
+    pub Text: *mut u8,
+    pub UnitsStart: *mut u8,
+    pub Range: u32,
+    pub Code: u32,
+    pub Low: u32,
     pub Stream: C2RustUnnamed_2,
-    pub Indx2Units: [Byte; 40],
-    pub Units2Indx: [Byte; 128],
+    pub Indx2Units: [u8; 40],
+    pub Units2Indx: [u8; 128],
     pub FreeList: [CPpmd_Void_Ref; 38],
-    pub Stamps: [UInt32; 38],
-    pub NS2BSIndx: [Byte; 256],
-    pub NS2Indx: [Byte; 260],
-    pub ExpEscape: [Byte; 16],
+    pub Stamps: [u32; 38],
+    pub NS2BSIndx: [u8; 256],
+    pub NS2Indx: [u8; 260],
+    pub ExpEscape: [u8; 16],
     pub DummySee: CPpmd_See,
     pub See: [[CPpmd_See; 32]; 24],
-    pub BinSumm: [[UInt16; 64]; 25],
+    pub BinSumm: [[u16; 64]; 25],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -72,45 +72,45 @@ pub type CPpmd8_Node = CPpmd8_Node_;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CPpmd8_Node_ {
-    pub Stamp: UInt32,
+    pub Stamp: u32,
     pub Next: CPpmd8_Node_Ref,
-    pub NU: UInt32,
+    pub NU: u32,
 }
-pub type CPpmd8_Node_Ref = UInt32;
-static PPMD8_kExpEscape: [Byte; 16] = [
-    25 as std::ffi::c_int as Byte,
-    14 as std::ffi::c_int as Byte,
-    9 as std::ffi::c_int as Byte,
-    7 as std::ffi::c_int as Byte,
-    5 as std::ffi::c_int as Byte,
-    5 as std::ffi::c_int as Byte,
-    4 as std::ffi::c_int as Byte,
-    4 as std::ffi::c_int as Byte,
-    4 as std::ffi::c_int as Byte,
-    3 as std::ffi::c_int as Byte,
-    3 as std::ffi::c_int as Byte,
-    3 as std::ffi::c_int as Byte,
-    2 as std::ffi::c_int as Byte,
-    2 as std::ffi::c_int as Byte,
-    2 as std::ffi::c_int as Byte,
-    2 as std::ffi::c_int as Byte,
+pub type CPpmd8_Node_Ref = u32;
+static PPMD8_kExpEscape: [u8; 16] = [
+    25 as std::ffi::c_int as u8,
+    14 as std::ffi::c_int as u8,
+    9 as std::ffi::c_int as u8,
+    7 as std::ffi::c_int as u8,
+    5 as std::ffi::c_int as u8,
+    5 as std::ffi::c_int as u8,
+    4 as std::ffi::c_int as u8,
+    4 as std::ffi::c_int as u8,
+    4 as std::ffi::c_int as u8,
+    3 as std::ffi::c_int as u8,
+    3 as std::ffi::c_int as u8,
+    3 as std::ffi::c_int as u8,
+    2 as std::ffi::c_int as u8,
+    2 as std::ffi::c_int as u8,
+    2 as std::ffi::c_int as u8,
+    2 as std::ffi::c_int as u8,
 ];
-static PPMD8_kInitBinEsc: [UInt16; 8] = [
-    0x3CDD as std::ffi::c_int as UInt16,
-    0x1F3F as std::ffi::c_int as UInt16,
-    0x59BF as std::ffi::c_int as UInt16,
-    0x48F3 as std::ffi::c_int as UInt16,
-    0x64A1 as std::ffi::c_int as UInt16,
-    0x5ABC as std::ffi::c_int as UInt16,
-    0x6632 as std::ffi::c_int as UInt16,
-    0x6051 as std::ffi::c_int as UInt16,
+static PPMD8_kInitBinEsc: [u16; 8] = [
+    0x3CDD as std::ffi::c_int as u16,
+    0x1F3F as std::ffi::c_int as u16,
+    0x59BF as std::ffi::c_int as u16,
+    0x48F3 as std::ffi::c_int as u16,
+    0x64A1 as std::ffi::c_int as u16,
+    0x5ABC as std::ffi::c_int as u16,
+    0x6632 as std::ffi::c_int as u16,
+    0x6051 as std::ffi::c_int as u16,
 ];
 
 pub unsafe extern "C" fn Ppmd8_Construct(mut p: *mut CPpmd8) {
     let mut i: std::ffi::c_uint = 0;
     let mut k: std::ffi::c_uint = 0;
     let mut m: std::ffi::c_uint = 0;
-    (*p).Base = 0 as *mut Byte;
+    (*p).Base = 0 as *mut u8;
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
     k = 0 as std::ffi::c_int as std::ffi::c_uint;
     while i
@@ -131,32 +131,32 @@ pub unsafe extern "C" fn Ppmd8_Construct(mut p: *mut CPpmd8) {
         loop {
             let fresh0 = k;
             k = k.wrapping_add(1);
-            (*p).Units2Indx[fresh0 as usize] = i as Byte;
+            (*p).Units2Indx[fresh0 as usize] = i as u8;
             step = step.wrapping_sub(1);
             if !(step != 0) {
                 break;
             }
         }
-        (*p).Indx2Units[i as usize] = k as Byte;
+        (*p).Indx2Units[i as usize] = k as u8;
         i = i.wrapping_add(1);
         i;
     }
     (*p).NS2BSIndx[0 as std::ffi::c_int as usize] =
-        ((0 as std::ffi::c_int) << 1 as std::ffi::c_int) as Byte;
+        ((0 as std::ffi::c_int) << 1 as std::ffi::c_int) as u8;
     (*p).NS2BSIndx[1 as std::ffi::c_int as usize] =
-        ((1 as std::ffi::c_int) << 1 as std::ffi::c_int) as Byte;
+        ((1 as std::ffi::c_int) << 1 as std::ffi::c_int) as u8;
     (*p).NS2BSIndx[2..11].fill(4);
     (*p).NS2BSIndx[11..].fill(6);
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
     while i < 5 as std::ffi::c_int as std::ffi::c_uint {
-        (*p).NS2Indx[i as usize] = i as Byte;
+        (*p).NS2Indx[i as usize] = i as u8;
         i = i.wrapping_add(1);
         i;
     }
     m = i;
     k = 1 as std::ffi::c_int as std::ffi::c_uint;
     while i < 260 as std::ffi::c_int as std::ffi::c_uint {
-        (*p).NS2Indx[i as usize] = m as Byte;
+        (*p).NS2Indx[i as usize] = m as u8;
         k = k.wrapping_sub(1);
         if k == 0 as std::ffi::c_int as std::ffi::c_uint {
             m = m.wrapping_add(1);
@@ -170,23 +170,23 @@ pub unsafe extern "C" fn Ppmd8_Construct(mut p: *mut CPpmd8) {
 
 pub unsafe extern "C" fn Ppmd8_Free(mut p: *mut CPpmd8, mut alloc: ISzAllocPtr) {
     ((*alloc).Free).expect("non-null function pointer")(alloc, (*p).Base as *mut std::ffi::c_void);
-    (*p).Size = 0 as std::ffi::c_int as UInt32;
-    (*p).Base = 0 as *mut Byte;
+    (*p).Size = 0 as std::ffi::c_int as u32;
+    (*p).Base = 0 as *mut u8;
 }
 
 pub unsafe extern "C" fn Ppmd8_Alloc(
     mut p: *mut CPpmd8,
-    mut size: UInt32,
+    mut size: u32,
     mut alloc: ISzAllocPtr,
-) -> BoolInt {
+) -> i32 {
     if ((*p).Base).is_null() || (*p).Size != size {
         Ppmd8_Free(p, alloc);
         (*p).AlignOffset =
-            (4 as std::ffi::c_int as UInt32).wrapping_sub(size) & 3 as std::ffi::c_int as UInt32;
+            (4 as std::ffi::c_int as u32).wrapping_sub(size) & 3 as std::ffi::c_int as u32;
         (*p).Base = ((*alloc).Alloc).expect("non-null function pointer")(
             alloc,
             ((*p).AlignOffset).wrapping_add(size) as usize,
-        ) as *mut Byte;
+        ) as *mut u8;
         if ((*p).Base).is_null() {
             return 0 as std::ffi::c_int;
         }
@@ -203,7 +203,7 @@ unsafe extern "C" fn Ppmd8_InsertNode(
     (*(node as *mut CPpmd8_Node)).Next = (*p).FreeList[indx as usize];
     (*(node as *mut CPpmd8_Node)).NU = (*p).Indx2Units[indx as usize] as std::ffi::c_uint;
     (*p).FreeList[indx as usize] =
-        (node as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
+        (node as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
     (*p).Stamps[indx as usize] = ((*p).Stamps[indx as usize]).wrapping_add(1);
     (*p).Stamps[indx as usize];
 }
@@ -227,18 +227,18 @@ unsafe extern "C" fn Ppmd8_SplitBlock(
     let mut i: std::ffi::c_uint = 0;
     let mut nu: std::ffi::c_uint = ((*p).Indx2Units[oldIndx as usize] as std::ffi::c_uint)
         .wrapping_sub((*p).Indx2Units[newIndx as usize] as std::ffi::c_uint);
-    ptr = (ptr as *mut Byte).offset(
-        ((*p).Indx2Units[newIndx as usize] as std::ffi::c_uint * 12 as std::ffi::c_int as UInt32)
+    ptr = (ptr as *mut u8).offset(
+        ((*p).Indx2Units[newIndx as usize] as std::ffi::c_uint * 12 as std::ffi::c_int as u32)
             as isize,
     ) as *mut std::ffi::c_void;
-    i = (*p).Units2Indx[(nu as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+    i = (*p).Units2Indx[(nu as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
         as std::ffi::c_uint;
     if (*p).Indx2Units[i as usize] as std::ffi::c_uint != nu {
         i = i.wrapping_sub(1);
         let mut k: std::ffi::c_uint = (*p).Indx2Units[i as usize] as std::ffi::c_uint;
         Ppmd8_InsertNode(
             p,
-            (ptr as *mut Byte).offset((k * 12 as std::ffi::c_int as UInt32) as isize)
+            (ptr as *mut u8).offset((k * 12 as std::ffi::c_int as u32) as isize)
                 as *mut std::ffi::c_void,
             nu.wrapping_sub(k)
                 .wrapping_sub(1 as std::ffi::c_int as std::ffi::c_uint),
@@ -248,12 +248,12 @@ unsafe extern "C" fn Ppmd8_SplitBlock(
 }
 unsafe extern "C" fn Ppmd8_GlueFreeBlocks(mut p: *mut CPpmd8) {
     let mut n: CPpmd8_Node_Ref = 0;
-    (*p).GlueCount = ((1 as std::ffi::c_int) << 13 as std::ffi::c_int) as UInt32;
+    (*p).GlueCount = ((1 as std::ffi::c_int) << 13 as std::ffi::c_int) as u32;
     (*p).Stamps = [0; 38];
 
     if (*p).LoUnit != (*p).HiUnit {
         (*((*p).LoUnit as *mut std::ffi::c_void as *mut CPpmd8_Node)).Stamp =
-            0 as std::ffi::c_int as UInt32;
+            0 as std::ffi::c_int as u32;
     }
     let mut prev: *mut CPpmd8_Node_Ref = &mut n;
     let mut i: std::ffi::c_uint = 0;
@@ -273,10 +273,10 @@ unsafe extern "C" fn Ppmd8_GlueFreeBlocks(mut p: *mut CPpmd8) {
         while next != 0 as std::ffi::c_int as CPpmd8_Node_Ref {
             let mut node: *mut CPpmd8_Node =
                 ((*p).Base).offset(next as isize) as *mut std::ffi::c_void as *mut CPpmd8_Node;
-            let mut nu: UInt32 = (*node).NU;
+            let mut nu: u32 = (*node).NU;
             *prev = next;
             next = (*node).Next;
-            if nu != 0 as std::ffi::c_int as UInt32 {
+            if nu != 0 as std::ffi::c_int as u32 {
                 let mut node2: *mut CPpmd8_Node = 0 as *mut CPpmd8_Node;
                 prev = &mut (*node).Next;
                 loop {
@@ -285,7 +285,7 @@ unsafe extern "C" fn Ppmd8_GlueFreeBlocks(mut p: *mut CPpmd8) {
                         break;
                     }
                     nu = nu.wrapping_add((*node2).NU);
-                    (*node2).NU = 0 as std::ffi::c_int as UInt32;
+                    (*node2).NU = 0 as std::ffi::c_int as u32;
                     (*node).NU = nu;
                 }
             }
@@ -297,13 +297,13 @@ unsafe extern "C" fn Ppmd8_GlueFreeBlocks(mut p: *mut CPpmd8) {
     while n != 0 as std::ffi::c_int as CPpmd8_Node_Ref {
         let mut node_0: *mut CPpmd8_Node =
             ((*p).Base).offset(n as isize) as *mut std::ffi::c_void as *mut CPpmd8_Node;
-        let mut nu_0: UInt32 = (*node_0).NU;
+        let mut nu_0: u32 = (*node_0).NU;
         let mut i_0: std::ffi::c_uint = 0;
         n = (*node_0).Next;
-        if nu_0 == 0 as std::ffi::c_int as UInt32 {
+        if nu_0 == 0 as std::ffi::c_int as u32 {
             continue;
         }
-        while nu_0 > 128 as std::ffi::c_int as UInt32 {
+        while nu_0 > 128 as std::ffi::c_int as u32 {
             Ppmd8_InsertNode(
                 p,
                 node_0 as *mut std::ffi::c_void,
@@ -317,11 +317,10 @@ unsafe extern "C" fn Ppmd8_GlueFreeBlocks(mut p: *mut CPpmd8) {
                         / 4 as std::ffi::c_int
                     - 1 as std::ffi::c_int) as std::ffi::c_uint,
             );
-            nu_0 = nu_0.wrapping_sub(128 as std::ffi::c_int as UInt32);
+            nu_0 = nu_0.wrapping_sub(128 as std::ffi::c_int as u32);
             node_0 = node_0.offset(128 as std::ffi::c_int as isize);
         }
-        i_0 = (*p).Units2Indx
-            [(nu_0 as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+        i_0 = (*p).Units2Indx[(nu_0 as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
             as std::ffi::c_uint;
         if (*p).Indx2Units[i_0 as usize] as std::ffi::c_uint != nu_0 {
             i_0 = i_0.wrapping_sub(1);
@@ -342,7 +341,7 @@ unsafe extern "C" fn Ppmd8_AllocUnitsRare(
     mut indx: std::ffi::c_uint,
 ) -> *mut std::ffi::c_void {
     let mut i: std::ffi::c_uint = 0;
-    if (*p).GlueCount == 0 as std::ffi::c_int as UInt32 {
+    if (*p).GlueCount == 0 as std::ffi::c_int as u32 {
         Ppmd8_GlueFreeBlocks(p);
         if (*p).FreeList[indx as usize] != 0 as std::ffi::c_int as CPpmd_Void_Ref {
             return Ppmd8_RemoveNode(p, indx);
@@ -360,16 +359,16 @@ unsafe extern "C" fn Ppmd8_AllocUnitsRare(
                 - 3 as std::ffi::c_int * 4 as std::ffi::c_int)
                 / 4 as std::ffi::c_int) as std::ffi::c_uint
         {
-            let mut numBytes: UInt32 = (*p).Indx2Units[indx as usize] as std::ffi::c_uint
-                * 12 as std::ffi::c_int as UInt32;
-            let mut us: *mut Byte = (*p).UnitsStart;
+            let mut numBytes: u32 =
+                (*p).Indx2Units[indx as usize] as std::ffi::c_uint * 12 as std::ffi::c_int as u32;
+            let mut us: *mut u8 = (*p).UnitsStart;
             (*p).GlueCount = ((*p).GlueCount).wrapping_sub(1);
             (*p).GlueCount;
-            return (if us.offset_from((*p).Text) as std::ffi::c_long as UInt32 > numBytes {
+            return (if us.offset_from((*p).Text) as std::ffi::c_long as u32 > numBytes {
                 (*p).UnitsStart = us.offset(-(numBytes as isize));
                 (*p).UnitsStart
             } else {
-                0 as *mut Byte
+                0 as *mut u8
             }) as *mut std::ffi::c_void;
         }
         if !((*p).FreeList[i as usize] == 0 as std::ffi::c_int as CPpmd_Void_Ref) {
@@ -387,10 +386,10 @@ unsafe extern "C" fn Ppmd8_AllocUnits(
     if (*p).FreeList[indx as usize] != 0 as std::ffi::c_int as CPpmd_Void_Ref {
         return Ppmd8_RemoveNode(p, indx);
     }
-    let mut numBytes: UInt32 =
-        (*p).Indx2Units[indx as usize] as std::ffi::c_uint * 12 as std::ffi::c_int as UInt32;
-    let mut lo: *mut Byte = (*p).LoUnit;
-    if ((*p).HiUnit).offset_from(lo) as std::ffi::c_long as UInt32 >= numBytes {
+    let mut numBytes: u32 =
+        (*p).Indx2Units[indx as usize] as std::ffi::c_uint * 12 as std::ffi::c_int as u32;
+    let mut lo: *mut u8 = (*p).LoUnit;
+    if ((*p).HiUnit).offset_from(lo) as std::ffi::c_long as u32 >= numBytes {
         (*p).LoUnit = lo.offset(numBytes as isize);
         return lo as *mut std::ffi::c_void;
     }
@@ -403,18 +402,18 @@ unsafe extern "C" fn ShrinkUnits(
     mut newNU: std::ffi::c_uint,
 ) -> *mut std::ffi::c_void {
     let mut i0: std::ffi::c_uint = (*p).Units2Indx
-        [(oldNU as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+        [(oldNU as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
         as std::ffi::c_uint;
     let mut i1: std::ffi::c_uint = (*p).Units2Indx
-        [(newNU as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+        [(newNU as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
         as std::ffi::c_uint;
     if i0 == i1 {
         return oldPtr;
     }
     if (*p).FreeList[i1 as usize] != 0 as std::ffi::c_int as CPpmd_Void_Ref {
         let mut ptr: *mut std::ffi::c_void = Ppmd8_RemoveNode(p, i1);
-        let mut d: *mut UInt32 = ptr as *mut UInt32;
-        let mut z: *const UInt32 = oldPtr as *const UInt32;
+        let mut d: *mut u32 = ptr as *mut u32;
+        let mut z: *const u32 = oldPtr as *const u32;
         let mut n: std::ffi::c_uint = newNU;
         loop {
             *d.offset(0 as std::ffi::c_int as isize) = *z.offset(0 as std::ffi::c_int as isize);
@@ -441,38 +440,38 @@ unsafe extern "C" fn FreeUnits(
     Ppmd8_InsertNode(
         p,
         ptr,
-        (*p).Units2Indx[(nu as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+        (*p).Units2Indx[(nu as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
             as std::ffi::c_uint,
     );
 }
 unsafe extern "C" fn SpecialFreeUnit(mut p: *mut CPpmd8, mut ptr: *mut std::ffi::c_void) {
-    if ptr as *mut Byte != (*p).UnitsStart {
+    if ptr as *mut u8 != (*p).UnitsStart {
         Ppmd8_InsertNode(p, ptr, 0 as std::ffi::c_int as std::ffi::c_uint);
     } else {
         (*p).UnitsStart = ((*p).UnitsStart).offset(12 as std::ffi::c_int as isize);
     };
 }
 unsafe extern "C" fn ExpandTextArea(mut p: *mut CPpmd8) {
-    let mut count: [UInt32; 38] = [0; 38];
+    let mut count: [u32; 38] = [0; 38];
     let mut i: std::ffi::c_uint = 0;
     if (*p).LoUnit != (*p).HiUnit {
         (*((*p).LoUnit as *mut std::ffi::c_void as *mut CPpmd8_Node)).Stamp =
-            0 as std::ffi::c_int as UInt32;
+            0 as std::ffi::c_int as u32;
     }
     let mut node: *mut CPpmd8_Node = (*p).UnitsStart as *mut std::ffi::c_void as *mut CPpmd8_Node;
     while (*node).Stamp == 0xFFFFFFFF as std::ffi::c_uint {
-        let mut nu: UInt32 = (*node).NU;
-        (*node).Stamp = 0 as std::ffi::c_int as UInt32;
-        count[(*p).Units2Indx[(nu as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+        let mut nu: u32 = (*node).NU;
+        (*node).Stamp = 0 as std::ffi::c_int as u32;
+        count[(*p).Units2Indx[(nu as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
             as usize] = (count[(*p).Units2Indx
-            [(nu as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+            [(nu as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
             as usize])
             .wrapping_add(1);
-        count[(*p).Units2Indx[(nu as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+        count[(*p).Units2Indx[(nu as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
             as usize];
         node = node.offset(nu as isize);
     }
-    (*p).UnitsStart = node as *mut Byte;
+    (*p).UnitsStart = node as *mut u8;
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
     while i
         < (4 as std::ffi::c_int
@@ -484,8 +483,8 @@ unsafe extern "C" fn ExpandTextArea(mut p: *mut CPpmd8) {
                 - 3 as std::ffi::c_int * 4 as std::ffi::c_int)
                 / 4 as std::ffi::c_int) as std::ffi::c_uint
     {
-        let mut cnt: UInt32 = count[i as usize];
-        if !(cnt == 0 as std::ffi::c_int as UInt32) {
+        let mut cnt: u32 = count[i as usize];
+        if !(cnt == 0 as std::ffi::c_int as u32) {
             let mut prev: *mut CPpmd8_Node_Ref =
                 &mut *((*p).FreeList).as_mut_ptr().offset(i as isize) as *mut CPpmd_Void_Ref
                     as *mut CPpmd8_Node_Ref;
@@ -495,12 +494,12 @@ unsafe extern "C" fn ExpandTextArea(mut p: *mut CPpmd8) {
                 let mut node_0: *mut CPpmd8_Node =
                     ((*p).Base).offset(n as isize) as *mut std::ffi::c_void as *mut CPpmd8_Node;
                 n = (*node_0).Next;
-                if (*node_0).Stamp != 0 as std::ffi::c_int as UInt32 {
+                if (*node_0).Stamp != 0 as std::ffi::c_int as u32 {
                     prev = &mut (*node_0).Next;
                 } else {
                     *prev = n;
                     cnt = cnt.wrapping_sub(1);
-                    if cnt == 0 as std::ffi::c_int as UInt32 {
+                    if cnt == 0 as std::ffi::c_int as u32 {
                         break;
                     }
                 }
@@ -511,8 +510,8 @@ unsafe extern "C" fn ExpandTextArea(mut p: *mut CPpmd8) {
     }
 }
 unsafe extern "C" fn Ppmd8State_SetSuccessor(mut p: *mut CPpmd_State, mut v: CPpmd_Void_Ref) {
-    (*p).Successor_0 = v as UInt16;
-    (*p).Successor_1 = (v >> 16 as std::ffi::c_int) as UInt16;
+    (*p).Successor_0 = v as u16;
+    (*p).Successor_1 = (v >> 16 as std::ffi::c_int) as u16;
 }
 #[inline(never)]
 unsafe extern "C" fn Ppmd8_RestartModel(mut p: *mut CPpmd8) {
@@ -526,18 +525,18 @@ unsafe extern "C" fn Ppmd8_RestartModel(mut p: *mut CPpmd8) {
         .offset(0 as std::ffi::c_int as isize);
     (*p).HiUnit = ((*p).Text).offset((*p).Size as isize);
     (*p).UnitsStart = ((*p).HiUnit).offset(
-        -(((*p).Size / 8 as std::ffi::c_int as UInt32 / 12 as std::ffi::c_int as UInt32
-            * 7 as std::ffi::c_int as UInt32
-            * 12 as std::ffi::c_int as UInt32) as isize),
+        -(((*p).Size / 8 as std::ffi::c_int as u32 / 12 as std::ffi::c_int as u32
+            * 7 as std::ffi::c_int as u32
+            * 12 as std::ffi::c_int as u32) as isize),
     );
     (*p).LoUnit = (*p).UnitsStart;
-    (*p).GlueCount = 0 as std::ffi::c_int as UInt32;
+    (*p).GlueCount = 0 as std::ffi::c_int as u32;
     (*p).OrderFall = (*p).MaxOrder;
     (*p).InitRL = -((if (*p).MaxOrder < 12 as std::ffi::c_int as std::ffi::c_uint {
         (*p).MaxOrder
     } else {
         12 as std::ffi::c_int as std::ffi::c_uint
-    }) as Int32)
+    }) as i32)
         - 1 as std::ffi::c_int;
     (*p).RunLength = (*p).InitRL;
     (*p).PrevSuccess = 0 as std::ffi::c_int as std::ffi::c_uint;
@@ -545,21 +544,21 @@ unsafe extern "C" fn Ppmd8_RestartModel(mut p: *mut CPpmd8) {
     let mut mc: *mut CPpmd8_Context = (*p).HiUnit as *mut std::ffi::c_void as PPMD8_CTX_PTR;
     let mut s: *mut CPpmd_State = (*p).LoUnit as *mut CPpmd_State;
     (*p).LoUnit = ((*p).LoUnit).offset(
-        ((256 as std::ffi::c_int / 2 as std::ffi::c_int) as UInt32
-            * 12 as std::ffi::c_int as UInt32) as isize,
+        ((256 as std::ffi::c_int / 2 as std::ffi::c_int) as u32 * 12 as std::ffi::c_int as u32)
+            as isize,
     );
     (*p).MinContext = mc;
     (*p).MaxContext = (*p).MinContext;
     (*p).FoundState = s;
-    (*mc).Flags = 0 as std::ffi::c_int as Byte;
-    (*mc).NumStats = (256 as std::ffi::c_int - 1 as std::ffi::c_int) as Byte;
-    (*mc).Union2.SummFreq = (256 as std::ffi::c_int + 1 as std::ffi::c_int) as UInt16;
-    (*mc).Union4.Stats = (s as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
+    (*mc).Flags = 0 as std::ffi::c_int as u8;
+    (*mc).NumStats = (256 as std::ffi::c_int - 1 as std::ffi::c_int) as u8;
+    (*mc).Union2.SummFreq = (256 as std::ffi::c_int + 1 as std::ffi::c_int) as u16;
+    (*mc).Union4.Stats = (s as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
     (*mc).Suffix = 0 as std::ffi::c_int as CPpmd8_Context_Ref;
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
     while i < 256 as std::ffi::c_int as std::ffi::c_uint {
-        (*s).Symbol = i as Byte;
-        (*s).Freq = 1 as std::ffi::c_int as Byte;
+        (*s).Symbol = i as u8;
+        (*s).Freq = 1 as std::ffi::c_int as u8;
         Ppmd8State_SetSuccessor(s, 0 as std::ffi::c_int as CPpmd_Void_Ref);
         i = i.wrapping_add(1);
         i;
@@ -576,14 +575,13 @@ unsafe extern "C" fn Ppmd8_RestartModel(mut p: *mut CPpmd8) {
         k = 0 as std::ffi::c_int as std::ffi::c_uint;
         while k < 8 as std::ffi::c_int as std::ffi::c_uint {
             let mut r: std::ffi::c_uint = 0;
-            let mut dest: *mut UInt16 = ((*p).BinSumm[m as usize]).as_mut_ptr().offset(k as isize);
-            let val: UInt16 = (((1 as std::ffi::c_int)
-                << 7 as std::ffi::c_int + 7 as std::ffi::c_int)
+            let mut dest: *mut u16 = ((*p).BinSumm[m as usize]).as_mut_ptr().offset(k as isize);
+            let val: u16 = (((1 as std::ffi::c_int) << 7 as std::ffi::c_int + 7 as std::ffi::c_int)
                 as std::ffi::c_uint)
                 .wrapping_sub(
                     (PPMD8_kInitBinEsc[k as usize] as std::ffi::c_uint)
                         .wrapping_div(i.wrapping_add(1 as std::ffi::c_int as std::ffi::c_uint)),
-                ) as UInt16;
+                ) as u16;
             r = 0 as std::ffi::c_int as std::ffi::c_uint;
             while r < 64 as std::ffi::c_int as std::ffi::c_uint {
                 *dest.offset(r as isize) = val;
@@ -600,7 +598,7 @@ unsafe extern "C" fn Ppmd8_RestartModel(mut p: *mut CPpmd8) {
     while m < 24 as std::ffi::c_int as std::ffi::c_uint {
         let mut summ: std::ffi::c_uint = 0;
         let mut s_0: *mut CPpmd_See = 0 as *mut CPpmd_See;
-        while (*p).NS2Indx[(i as size_t).wrapping_add(3 as std::ffi::c_int as size_t) as usize]
+        while (*p).NS2Indx[(i as usize).wrapping_add(3 as std::ffi::c_int as usize) as usize]
             as std::ffi::c_uint
             == m.wrapping_add(3 as std::ffi::c_int as std::ffi::c_uint)
         {
@@ -614,9 +612,9 @@ unsafe extern "C" fn Ppmd8_RestartModel(mut p: *mut CPpmd8) {
             << 7 as std::ffi::c_int - 4 as std::ffi::c_int;
         k = 0 as std::ffi::c_int as std::ffi::c_uint;
         while k < 32 as std::ffi::c_int as std::ffi::c_uint {
-            (*s_0).Summ = summ as UInt16;
-            (*s_0).Shift = (7 as std::ffi::c_int - 4 as std::ffi::c_int) as Byte;
-            (*s_0).Count = 7 as std::ffi::c_int as Byte;
+            (*s_0).Summ = summ as u16;
+            (*s_0).Shift = (7 as std::ffi::c_int - 4 as std::ffi::c_int) as u8;
+            (*s_0).Count = 7 as std::ffi::c_int as u8;
             k = k.wrapping_add(1);
             k;
             s_0 = s_0.offset(1);
@@ -625,9 +623,9 @@ unsafe extern "C" fn Ppmd8_RestartModel(mut p: *mut CPpmd8) {
         m = m.wrapping_add(1);
         m;
     }
-    (*p).DummySee.Summ = 0 as std::ffi::c_int as UInt16;
-    (*p).DummySee.Shift = 7 as std::ffi::c_int as Byte;
-    (*p).DummySee.Count = 64 as std::ffi::c_int as Byte;
+    (*p).DummySee.Summ = 0 as std::ffi::c_int as u16;
+    (*p).DummySee.Shift = 7 as std::ffi::c_int as u8;
+    (*p).DummySee.Count = 64 as std::ffi::c_int as u8;
 }
 
 pub unsafe extern "C" fn Ppmd8_Init(
@@ -656,24 +654,24 @@ unsafe extern "C" fn Refresh(
         oldNU,
         i.wrapping_add(2 as std::ffi::c_int as std::ffi::c_uint) >> 1 as std::ffi::c_int,
     ) as *mut CPpmd_State;
-    (*ctx).Union4.Stats = (s as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
-    scale |= ((*ctx).Union2.SummFreq as UInt32
-        >= (1 as std::ffi::c_int as UInt32) << 15 as std::ffi::c_int)
-        as std::ffi::c_int as std::ffi::c_uint;
+    (*ctx).Union4.Stats = (s as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
+    scale |= ((*ctx).Union2.SummFreq as u32
+        >= (1 as std::ffi::c_int as u32) << 15 as std::ffi::c_int) as std::ffi::c_int
+        as std::ffi::c_uint;
     flags =
         ((*s).Symbol as std::ffi::c_uint).wrapping_add(0xC0 as std::ffi::c_int as std::ffi::c_uint);
     let mut freq: std::ffi::c_uint = (*s).Freq as std::ffi::c_uint;
     escFreq = ((*ctx).Union2.SummFreq as std::ffi::c_uint).wrapping_sub(freq);
     freq = freq.wrapping_add(scale) >> scale;
     sumFreq = freq;
-    (*s).Freq = freq as Byte;
+    (*s).Freq = freq as u8;
     loop {
         s = s.offset(1);
         let mut freq_0: std::ffi::c_uint = (*s).Freq as std::ffi::c_uint;
         escFreq = escFreq.wrapping_sub(freq_0);
         freq_0 = freq_0.wrapping_add(scale) >> scale;
         sumFreq = sumFreq.wrapping_add(freq_0);
-        (*s).Freq = freq_0 as Byte;
+        (*s).Freq = freq_0 as u8;
         flags |= ((*s).Symbol as std::ffi::c_uint)
             .wrapping_add(0xC0 as std::ffi::c_int as std::ffi::c_uint);
         i = i.wrapping_sub(1);
@@ -681,7 +679,7 @@ unsafe extern "C" fn Refresh(
             break;
         }
     }
-    (*ctx).Union2.SummFreq = sumFreq.wrapping_add(escFreq.wrapping_add(scale) >> scale) as UInt16;
+    (*ctx).Union2.SummFreq = sumFreq.wrapping_add(escFreq.wrapping_add(scale) >> scale) as u16;
     (*ctx).Flags = ((*ctx).Flags as std::ffi::c_uint
         & (((1 as std::ffi::c_int) << 4 as std::ffi::c_int) as std::ffi::c_uint).wrapping_add(
             (((1 as std::ffi::c_int) << 2 as std::ffi::c_int) as std::ffi::c_uint)
@@ -690,7 +688,7 @@ unsafe extern "C" fn Refresh(
     .wrapping_add(
         flags >> 8 as std::ffi::c_int - 3 as std::ffi::c_int
             & ((1 as std::ffi::c_int) << 3 as std::ffi::c_int) as std::ffi::c_uint,
-    ) as Byte;
+    ) as u8;
 }
 unsafe extern "C" fn SWAP_STATES(mut t1: *mut CPpmd_State, mut t2: *mut CPpmd_State) {
     let mut tmp: CPpmd_State = *t1;
@@ -709,8 +707,8 @@ unsafe extern "C" fn CutOff(
         let mut s: *mut CPpmd_State =
             &mut (*ctx).Union2 as *mut C2RustUnnamed_0 as *mut CPpmd_State;
         let mut successor: CPpmd_Void_Ref =
-            (*s).Successor_0 as UInt32 | ((*s).Successor_1 as UInt32) << 16 as std::ffi::c_int;
-        if ((*p).Base).offset(successor as isize) as *mut std::ffi::c_void as *mut Byte
+            (*s).Successor_0 as u32 | ((*s).Successor_1 as u32) << 16 as std::ffi::c_int;
+        if ((*p).Base).offset(successor as isize) as *mut std::ffi::c_void as *mut u8
             >= (*p).UnitsStart
         {
             if order < (*p).MaxOrder {
@@ -725,7 +723,7 @@ unsafe extern "C" fn CutOff(
             }
             Ppmd8State_SetSuccessor(s, successor);
             if successor != 0 || order <= 9 as std::ffi::c_int as std::ffi::c_uint {
-                return (ctx as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
+                return (ctx as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
             }
         }
         SpecialFreeUnit(p, ctx as *mut std::ffi::c_void);
@@ -734,19 +732,18 @@ unsafe extern "C" fn CutOff(
     nu = (ns as std::ffi::c_uint).wrapping_add(2 as std::ffi::c_int as std::ffi::c_uint)
         >> 1 as std::ffi::c_int;
     let mut indx: std::ffi::c_uint = (*p).Units2Indx
-        [(nu as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+        [(nu as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
         as std::ffi::c_uint;
     stats = ((*p).Base).offset((*ctx).Union4.Stats as isize) as *mut std::ffi::c_void
         as *mut CPpmd_State;
-    if (stats as *mut Byte).offset_from((*p).UnitsStart) as std::ffi::c_long as UInt32
-        <= ((1 as std::ffi::c_int) << 14 as std::ffi::c_int) as UInt32
+    if (stats as *mut u8).offset_from((*p).UnitsStart) as std::ffi::c_long as u32
+        <= ((1 as std::ffi::c_int) << 14 as std::ffi::c_int) as u32
         && (*ctx).Union4.Stats <= (*p).FreeList[indx as usize]
     {
         let mut ptr: *mut std::ffi::c_void = Ppmd8_RemoveNode(p, indx);
-        (*ctx).Union4.Stats =
-            (ptr as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
-        let mut d: *mut UInt32 = ptr as *mut UInt32;
-        let mut z: *const UInt32 = stats as *const std::ffi::c_void as *const UInt32;
+        (*ctx).Union4.Stats = (ptr as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
+        let mut d: *mut u32 = ptr as *mut u32;
+        let mut z: *const u32 = stats as *const std::ffi::c_void as *const u32;
         let mut n: std::ffi::c_uint = nu;
         loop {
             *d.offset(0 as std::ffi::c_int as isize) = *z.offset(0 as std::ffi::c_int as isize);
@@ -759,12 +756,12 @@ unsafe extern "C" fn CutOff(
                 break;
             }
         }
-        if stats as *mut Byte != (*p).UnitsStart {
+        if stats as *mut u8 != (*p).UnitsStart {
             Ppmd8_InsertNode(p, stats as *mut std::ffi::c_void, indx);
         } else {
             (*p).UnitsStart = ((*p).UnitsStart).offset(
-                ((*p).Indx2Units[indx as usize] as std::ffi::c_uint
-                    * 12 as std::ffi::c_int as UInt32) as isize,
+                ((*p).Indx2Units[indx as usize] as std::ffi::c_uint * 12 as std::ffi::c_int as u32)
+                    as isize,
             );
         }
         stats = ptr as *mut CPpmd_State;
@@ -772,8 +769,8 @@ unsafe extern "C" fn CutOff(
     let mut s_0: *mut CPpmd_State = stats.offset(ns as std::ffi::c_uint as isize);
     loop {
         let mut successor_0: CPpmd_Void_Ref =
-            (*s_0).Successor_0 as UInt32 | ((*s_0).Successor_1 as UInt32) << 16 as std::ffi::c_int;
-        if (((*p).Base).offset(successor_0 as isize) as *mut std::ffi::c_void as *mut Byte)
+            (*s_0).Successor_0 as u32 | ((*s_0).Successor_1 as u32) << 16 as std::ffi::c_int;
+        if (((*p).Base).offset(successor_0 as isize) as *mut std::ffi::c_void as *mut u8)
             < (*p).UnitsStart
         {
             let fresh1 = ns;
@@ -811,9 +808,9 @@ unsafe extern "C" fn CutOff(
             SpecialFreeUnit(p, ctx as *mut std::ffi::c_void);
             return 0 as std::ffi::c_int as CPpmd_Void_Ref;
         }
-        (*ctx).NumStats = ns as Byte;
+        (*ctx).NumStats = ns as u8;
         if ns == 0 as std::ffi::c_int {
-            let sym: Byte = (*stats).Symbol;
+            let sym: u8 = (*stats).Symbol;
             (*ctx).Flags = (((*ctx).Flags as std::ffi::c_int
                 & (1 as std::ffi::c_int) << 4 as std::ffi::c_int)
                 as std::ffi::c_uint)
@@ -822,11 +819,11 @@ unsafe extern "C" fn CutOff(
                         .wrapping_add(0xC0 as std::ffi::c_int as std::ffi::c_uint)
                         >> 8 as std::ffi::c_int - 3 as std::ffi::c_int
                         & ((1 as std::ffi::c_int) << 3 as std::ffi::c_int) as std::ffi::c_uint,
-                ) as Byte;
+                ) as u8;
             (*ctx).Union2.State2.Symbol = sym;
             (*ctx).Union2.State2.Freq = (((*stats).Freq as std::ffi::c_uint)
                 .wrapping_add(11 as std::ffi::c_int as std::ffi::c_uint)
-                >> 3 as std::ffi::c_int) as Byte;
+                >> 3 as std::ffi::c_int) as u8;
             (*ctx).Union4.State4.Successor_0 = (*stats).Successor_0;
             (*ctx).Union4.State4.Successor_1 = (*stats).Successor_1;
             FreeUnits(p, stats as *mut std::ffi::c_void, nu);
@@ -842,10 +839,10 @@ unsafe extern "C" fn CutOff(
             );
         }
     }
-    return (ctx as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
+    return (ctx as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
 }
-unsafe extern "C" fn GetUsedMemory(mut p: *const CPpmd8) -> UInt32 {
-    let mut v: UInt32 = 0 as std::ffi::c_int as UInt32;
+unsafe extern "C" fn GetUsedMemory(mut p: *const CPpmd8) -> u32 {
+    let mut v: u32 = 0 as std::ffi::c_int as u32;
     let mut i: std::ffi::c_uint = 0;
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
     while i
@@ -860,14 +857,14 @@ unsafe extern "C" fn GetUsedMemory(mut p: *const CPpmd8) -> UInt32 {
     {
         v = (v as std::ffi::c_uint).wrapping_add(
             ((*p).Stamps[i as usize]).wrapping_mul((*p).Indx2Units[i as usize] as std::ffi::c_uint),
-        ) as UInt32 as UInt32;
+        ) as u32 as u32;
         i = i.wrapping_add(1);
         i;
     }
     return ((*p).Size)
-        .wrapping_sub(((*p).HiUnit).offset_from((*p).LoUnit) as std::ffi::c_long as UInt32)
-        .wrapping_sub(((*p).UnitsStart).offset_from((*p).Text) as std::ffi::c_long as UInt32)
-        .wrapping_sub(v * 12 as std::ffi::c_int as UInt32);
+        .wrapping_sub(((*p).HiUnit).offset_from((*p).LoUnit) as std::ffi::c_long as u32)
+        .wrapping_sub(((*p).UnitsStart).offset_from((*p).Text) as std::ffi::c_long as u32)
+        .wrapping_sub(v * 12 as std::ffi::c_int as u32);
 }
 unsafe extern "C" fn RestoreModel(mut p: *mut CPpmd8, mut ctxError: PPMD8_CTX_PTR) {
     let mut c: PPMD8_CTX_PTR = 0 as *mut CPpmd8_Context;
@@ -889,11 +886,11 @@ unsafe extern "C" fn RestoreModel(mut p: *mut CPpmd8, mut ctxError: PPMD8_CTX_PT
                         .wrapping_add(0xC0 as std::ffi::c_int as std::ffi::c_uint)
                         >> 8 as std::ffi::c_int - 3 as std::ffi::c_int
                         & ((1 as std::ffi::c_int) << 3 as std::ffi::c_int) as std::ffi::c_uint,
-                ) as Byte;
+                ) as u8;
             (*c).Union2.State2.Symbol = (*s).Symbol;
             (*c).Union2.State2.Freq = (((*s).Freq as std::ffi::c_uint)
                 .wrapping_add(11 as std::ffi::c_int as std::ffi::c_uint)
-                >> 3 as std::ffi::c_int) as Byte;
+                >> 3 as std::ffi::c_int) as u8;
             (*c).Union4.State4.Successor_0 = (*s).Successor_0;
             (*c).Union4.State4.Successor_1 = (*s).Successor_1;
             SpecialFreeUnit(p, s as *mut std::ffi::c_void);
@@ -914,10 +911,10 @@ unsafe extern "C" fn RestoreModel(mut p: *mut CPpmd8, mut ctxError: PPMD8_CTX_PT
         if (*c).NumStats as std::ffi::c_int == 0 as std::ffi::c_int {
             (*c).Union2.State2.Freq = (((*c).Union2.State2.Freq as std::ffi::c_uint)
                 .wrapping_add(1 as std::ffi::c_int as std::ffi::c_uint)
-                >> 1 as std::ffi::c_int) as Byte;
+                >> 1 as std::ffi::c_int) as u8;
         } else {
             (*c).Union2.SummFreq =
-                ((*c).Union2.SummFreq as std::ffi::c_int + 4 as std::ffi::c_int) as UInt16;
+                ((*c).Union2.SummFreq as std::ffi::c_int + 4 as std::ffi::c_int) as u16;
             if (*c).Union2.SummFreq as std::ffi::c_int
                 > 128 as std::ffi::c_int + 4 as std::ffi::c_int * (*c).NumStats as std::ffi::c_int
             {
@@ -947,12 +944,12 @@ unsafe extern "C" fn RestoreModel(mut p: *mut CPpmd8, mut ctxError: PPMD8_CTX_PT
             CutOff(p, (*p).MaxContext, 0 as std::ffi::c_int as std::ffi::c_uint);
             ExpandTextArea(p);
             if !(GetUsedMemory(p)
-                > 3 as std::ffi::c_int as UInt32 * ((*p).Size >> 2 as std::ffi::c_int))
+                > 3 as std::ffi::c_int as u32 * ((*p).Size >> 2 as std::ffi::c_int))
             {
                 break;
             }
         }
-        (*p).GlueCount = 0 as std::ffi::c_int as UInt32;
+        (*p).GlueCount = 0 as std::ffi::c_int as u32;
         (*p).OrderFall = (*p).MaxOrder;
     }
     (*p).MinContext = (*p).MaxContext;
@@ -960,15 +957,15 @@ unsafe extern "C" fn RestoreModel(mut p: *mut CPpmd8, mut ctxError: PPMD8_CTX_PT
 #[inline(never)]
 unsafe extern "C" fn Ppmd8_CreateSuccessors(
     mut p: *mut CPpmd8,
-    mut skip: BoolInt,
+    mut skip: i32,
     mut s1: *mut CPpmd_State,
     mut c: PPMD8_CTX_PTR,
 ) -> PPMD8_CTX_PTR {
-    let mut upBranch: CPpmd_Byte_Ref = (*(*p).FoundState).Successor_0 as UInt32
-        | ((*(*p).FoundState).Successor_1 as UInt32) << 16 as std::ffi::c_int;
-    let mut newSym: Byte = 0;
-    let mut newFreq: Byte = 0;
-    let mut flags: Byte = 0;
+    let mut upBranch: CPpmd_Byte_Ref = (*(*p).FoundState).Successor_0 as u32
+        | ((*(*p).FoundState).Successor_1 as u32) << 16 as std::ffi::c_int;
+    let mut newSym: u8 = 0;
+    let mut newFreq: u8 = 0;
+    let mut flags: u8 = 0;
     let mut numPs: std::ffi::c_uint = 0 as std::ffi::c_int as std::ffi::c_uint;
     let mut ps: [*mut CPpmd_State; 17] = [0 as *mut CPpmd_State; 17];
     if skip == 0 {
@@ -985,7 +982,7 @@ unsafe extern "C" fn Ppmd8_CreateSuccessors(
             s = s1;
             s1 = 0 as *mut CPpmd_State;
         } else if (*c).NumStats as std::ffi::c_int != 0 as std::ffi::c_int {
-            let mut sym: Byte = (*(*p).FoundState).Symbol;
+            let mut sym: u8 = (*(*p).FoundState).Symbol;
             s = ((*p).Base).offset((*c).Union4.Stats as isize) as *mut std::ffi::c_void
                 as *mut CPpmd_State;
             while (*s).Symbol as std::ffi::c_int != sym as std::ffi::c_int {
@@ -1006,10 +1003,9 @@ unsafe extern "C" fn Ppmd8_CreateSuccessors(
                     .NumStats
                     == 0) as std::ffi::c_int
                     & (((*s).Freq as std::ffi::c_int) < 24 as std::ffi::c_int) as std::ffi::c_int))
-                as Byte;
+                as u8;
         }
-        successor =
-            (*s).Successor_0 as UInt32 | ((*s).Successor_1 as UInt32) << 16 as std::ffi::c_int;
+        successor = (*s).Successor_0 as u32 | ((*s).Successor_1 as u32) << 16 as std::ffi::c_int;
         if successor != upBranch {
             c = ((*p).Base).offset(successor as isize) as *mut std::ffi::c_void
                 as *mut CPpmd8_Context;
@@ -1023,7 +1019,7 @@ unsafe extern "C" fn Ppmd8_CreateSuccessors(
             ps[fresh3 as usize] = s;
         }
     }
-    newSym = *(((*p).Base).offset(upBranch as isize) as *mut std::ffi::c_void as *const Byte);
+    newSym = *(((*p).Base).offset(upBranch as isize) as *mut std::ffi::c_void as *const u8);
     upBranch = upBranch.wrapping_add(1);
     upBranch;
     flags = (((*(*p).FoundState).Symbol as std::ffi::c_uint)
@@ -1034,12 +1030,12 @@ unsafe extern "C" fn Ppmd8_CreateSuccessors(
             (newSym as std::ffi::c_uint).wrapping_add(0xC0 as std::ffi::c_int as std::ffi::c_uint)
                 >> 8 as std::ffi::c_int - 3 as std::ffi::c_int
                 & ((1 as std::ffi::c_int) << 3 as std::ffi::c_int) as std::ffi::c_uint,
-        ) as Byte;
+        ) as u8;
     if (*c).NumStats as std::ffi::c_int == 0 as std::ffi::c_int {
         newFreq = (*c).Union2.State2.Freq;
     } else {
-        let mut cf: UInt32 = 0;
-        let mut s0: UInt32 = 0;
+        let mut cf: u32 = 0;
+        let mut s0: u32 = 0;
         let mut s_0: *mut CPpmd_State = 0 as *mut CPpmd_State;
         s_0 = ((*p).Base).offset((*c).Union4.Stats as isize) as *mut std::ffi::c_void
             as *mut CPpmd_State;
@@ -1047,19 +1043,19 @@ unsafe extern "C" fn Ppmd8_CreateSuccessors(
             s_0 = s_0.offset(1);
             s_0;
         }
-        cf = ((*s_0).Freq as UInt32).wrapping_sub(1 as std::ffi::c_int as UInt32);
-        s0 = ((*c).Union2.SummFreq as UInt32)
-            .wrapping_sub((*c).NumStats as UInt32)
+        cf = ((*s_0).Freq as u32).wrapping_sub(1 as std::ffi::c_int as u32);
+        s0 = ((*c).Union2.SummFreq as u32)
+            .wrapping_sub((*c).NumStats as u32)
             .wrapping_sub(cf);
-        newFreq = (1 as std::ffi::c_int as UInt32).wrapping_add(
-            (if 2 as std::ffi::c_int as UInt32 * cf <= s0 {
-                (5 as std::ffi::c_int as UInt32 * cf > s0) as std::ffi::c_int as UInt32
+        newFreq = (1 as std::ffi::c_int as u32).wrapping_add(
+            (if 2 as std::ffi::c_int as u32 * cf <= s0 {
+                (5 as std::ffi::c_int as u32 * cf > s0) as std::ffi::c_int as u32
             } else {
-                cf.wrapping_add(2 as std::ffi::c_int as UInt32 * s0)
-                    .wrapping_sub(3 as std::ffi::c_int as UInt32)
+                cf.wrapping_add(2 as std::ffi::c_int as u32 * s0)
+                    .wrapping_sub(3 as std::ffi::c_int as u32)
                     / s0
             }),
-        ) as Byte;
+        ) as u8;
     }
     loop {
         let mut c1: PPMD8_CTX_PTR = 0 as *mut CPpmd8_Context;
@@ -1077,18 +1073,18 @@ unsafe extern "C" fn Ppmd8_CreateSuccessors(
             }
         }
         (*c1).Flags = flags;
-        (*c1).NumStats = 0 as std::ffi::c_int as Byte;
+        (*c1).NumStats = 0 as std::ffi::c_int as u8;
         (*c1).Union2.State2.Symbol = newSym;
         (*c1).Union2.State2.Freq = newFreq;
         Ppmd8State_SetSuccessor(
             &mut (*c1).Union2 as *mut C2RustUnnamed_0 as *mut CPpmd_State,
             upBranch,
         );
-        (*c1).Suffix = (c as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
+        (*c1).Suffix = (c as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
         numPs = numPs.wrapping_sub(1);
         Ppmd8State_SetSuccessor(
             ps[numPs as usize],
-            (c1 as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32,
+            (c1 as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32,
         );
         c = c1;
         if !(numPs != 0 as std::ffi::c_int as std::ffi::c_uint) {
@@ -1105,7 +1101,7 @@ unsafe extern "C" fn ReduceOrder(
     let mut s: *mut CPpmd_State = 0 as *mut CPpmd_State;
     let mut c1: PPMD8_CTX_PTR = c;
     let mut upBranch: CPpmd_Void_Ref =
-        ((*p).Text).offset_from((*p).Base) as std::ffi::c_long as UInt32;
+        ((*p).Text).offset_from((*p).Base) as std::ffi::c_long as u32;
     Ppmd8State_SetSuccessor((*p).FoundState, upBranch);
     (*p).OrderFall = ((*p).OrderFall).wrapping_add(1);
     (*p).OrderFall;
@@ -1136,27 +1132,25 @@ unsafe extern "C" fn ReduceOrder(
                     }
                 }
                 if ((*s).Freq as std::ffi::c_int) < 124 as std::ffi::c_int - 9 as std::ffi::c_int {
-                    (*s).Freq = ((*s).Freq as std::ffi::c_int + 2 as std::ffi::c_int) as Byte;
+                    (*s).Freq = ((*s).Freq as std::ffi::c_int + 2 as std::ffi::c_int) as u8;
                     (*c).Union2.SummFreq =
-                        ((*c).Union2.SummFreq as std::ffi::c_int + 2 as std::ffi::c_int) as UInt16;
+                        ((*c).Union2.SummFreq as std::ffi::c_int + 2 as std::ffi::c_int) as u16;
                 }
             } else {
                 s = &mut (*c).Union2 as *mut C2RustUnnamed_0 as *mut CPpmd_State;
                 (*s).Freq = ((*s).Freq as std::ffi::c_int
                     + (((*s).Freq as std::ffi::c_int) < 32 as std::ffi::c_int) as std::ffi::c_int)
-                    as Byte;
+                    as u8;
             }
         }
-        if (*s).Successor_0 as UInt32 | ((*s).Successor_1 as UInt32) << 16 as std::ffi::c_int != 0 {
+        if (*s).Successor_0 as u32 | ((*s).Successor_1 as u32) << 16 as std::ffi::c_int != 0 {
             break;
         }
         Ppmd8State_SetSuccessor(s, upBranch);
         (*p).OrderFall = ((*p).OrderFall).wrapping_add(1);
         (*p).OrderFall;
     }
-    if (*s).Successor_0 as UInt32 | ((*s).Successor_1 as UInt32) << 16 as std::ffi::c_int
-        <= upBranch
-    {
+    if (*s).Successor_0 as u32 | ((*s).Successor_1 as u32) << 16 as std::ffi::c_int <= upBranch {
         let mut successor: PPMD8_CTX_PTR = 0 as *mut CPpmd8_Context;
         let mut s2: *mut CPpmd_State = (*p).FoundState;
         (*p).FoundState = s;
@@ -1166,13 +1160,13 @@ unsafe extern "C" fn ReduceOrder(
         } else {
             Ppmd8State_SetSuccessor(
                 s,
-                (successor as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32,
+                (successor as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32,
             );
         }
         (*p).FoundState = s2;
     }
     let mut successor_0: CPpmd_Void_Ref =
-        (*s).Successor_0 as UInt32 | ((*s).Successor_1 as UInt32) << 16 as std::ffi::c_int;
+        (*s).Successor_0 as u32 | ((*s).Successor_1 as u32) << 16 as std::ffi::c_int;
     if (*p).OrderFall == 1 as std::ffi::c_int as std::ffi::c_uint && c1 == (*p).MaxContext {
         Ppmd8State_SetSuccessor((*p).FoundState, successor_0);
         (*p).Text = ((*p).Text).offset(-1);
@@ -1188,14 +1182,14 @@ unsafe extern "C" fn ReduceOrder(
 #[inline(never)]
 pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
     let mut maxSuccessor: CPpmd_Void_Ref = 0;
-    let mut minSuccessor: CPpmd_Void_Ref = (*(*p).FoundState).Successor_0 as UInt32
-        | ((*(*p).FoundState).Successor_1 as UInt32) << 16 as std::ffi::c_int;
+    let mut minSuccessor: CPpmd_Void_Ref = (*(*p).FoundState).Successor_0 as u32
+        | ((*(*p).FoundState).Successor_1 as u32) << 16 as std::ffi::c_int;
     let mut c: PPMD8_CTX_PTR = 0 as *mut CPpmd8_Context;
     let mut s0: std::ffi::c_uint = 0;
     let mut ns: std::ffi::c_uint = 0;
     let mut fFreq: std::ffi::c_uint = (*(*p).FoundState).Freq as std::ffi::c_uint;
-    let mut flag: Byte = 0;
-    let mut fSymbol: Byte = (*(*p).FoundState).Symbol;
+    let mut flag: u8 = 0;
+    let mut fSymbol: u8 = (*(*p).FoundState).Symbol;
     let mut s: *mut CPpmd_State = 0 as *mut CPpmd_State;
     if ((*(*p).FoundState).Freq as std::ffi::c_int) < 124 as std::ffi::c_int / 4 as std::ffi::c_int
         && (*(*p).MinContext).Suffix != 0 as std::ffi::c_int as CPpmd8_Context_Ref
@@ -1209,7 +1203,7 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
                 (*s).Freq;
             }
         } else {
-            let mut sym: Byte = (*(*p).FoundState).Symbol;
+            let mut sym: u8 = (*(*p).FoundState).Symbol;
             s = ((*p).Base).offset((*c).Union4.Stats as isize) as *mut std::ffi::c_void
                 as *mut CPpmd_State;
             if (*s).Symbol as std::ffi::c_int != sym as std::ffi::c_int {
@@ -1232,9 +1226,9 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
                 }
             }
             if ((*s).Freq as std::ffi::c_int) < 124 as std::ffi::c_int - 9 as std::ffi::c_int {
-                (*s).Freq = ((*s).Freq as std::ffi::c_int + 2 as std::ffi::c_int) as Byte;
+                (*s).Freq = ((*s).Freq as std::ffi::c_int + 2 as std::ffi::c_int) as u8;
                 (*c).Union2.SummFreq =
-                    ((*c).Union2.SummFreq as std::ffi::c_int + 2 as std::ffi::c_int) as UInt16;
+                    ((*c).Union2.SummFreq as std::ffi::c_int + 2 as std::ffi::c_int) as u16;
             }
         }
     }
@@ -1249,13 +1243,13 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
         }
         Ppmd8State_SetSuccessor(
             (*p).FoundState,
-            (cs as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32,
+            (cs as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32,
         );
         (*p).MaxContext = cs;
         (*p).MinContext = (*p).MaxContext;
         return;
     }
-    let mut text: *mut Byte = (*p).Text;
+    let mut text: *mut u8 = (*p).Text;
     let fresh4 = text;
     text = text.offset(1);
     *fresh4 = (*(*p).FoundState).Symbol;
@@ -1264,15 +1258,15 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
         RestoreModel(p, c);
         return;
     }
-    maxSuccessor = text.offset_from((*p).Base) as std::ffi::c_long as UInt32;
+    maxSuccessor = text.offset_from((*p).Base) as std::ffi::c_long as u32;
     if minSuccessor == 0 {
         let mut cs_0: PPMD8_CTX_PTR = ReduceOrder(p, s, (*p).MinContext);
         if cs_0.is_null() {
             RestoreModel(p, c);
             return;
         }
-        minSuccessor = (cs_0 as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
-    } else if (((*p).Base).offset(minSuccessor as isize) as *mut std::ffi::c_void as *mut Byte)
+        minSuccessor = (cs_0 as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
+    } else if (((*p).Base).offset(minSuccessor as isize) as *mut std::ffi::c_void as *mut u8)
         < (*p).UnitsStart
     {
         let mut cs_1: PPMD8_CTX_PTR =
@@ -1281,7 +1275,7 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
             RestoreModel(p, c);
             return;
         }
-        minSuccessor = (cs_1 as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
+        minSuccessor = (cs_1 as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
     }
     (*p).OrderFall = ((*p).OrderFall).wrapping_sub(1);
     if (*p).OrderFall == 0 as std::ffi::c_int as std::ffi::c_uint {
@@ -1291,14 +1285,14 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
     }
     flag = ((fSymbol as std::ffi::c_uint).wrapping_add(0xC0 as std::ffi::c_int as std::ffi::c_uint)
         >> 8 as std::ffi::c_int - 3 as std::ffi::c_int
-        & ((1 as std::ffi::c_int) << 3 as std::ffi::c_int) as std::ffi::c_uint) as Byte;
+        & ((1 as std::ffi::c_int) << 3 as std::ffi::c_int) as std::ffi::c_uint) as u8;
     ns = (*(*p).MinContext).NumStats as std::ffi::c_uint;
     s0 = ((*(*p).MinContext).Union2.SummFreq as std::ffi::c_uint)
         .wrapping_sub(ns)
         .wrapping_sub(fFreq);
     while c != (*p).MinContext {
         let mut ns1: std::ffi::c_uint = 0;
-        let mut sum: UInt32 = 0;
+        let mut sum: u32 = 0;
         ns1 = (*c).NumStats as std::ffi::c_uint;
         if ns1 != 0 as std::ffi::c_int as std::ffi::c_uint {
             if ns1 & 1 as std::ffi::c_int as std::ffi::c_uint
@@ -1308,11 +1302,11 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
                     .wrapping_add(1 as std::ffi::c_int as std::ffi::c_uint)
                     >> 1 as std::ffi::c_int;
                 let i: std::ffi::c_uint = (*p).Units2Indx
-                    [(oldNU as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+                    [(oldNU as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
                     as std::ffi::c_uint;
-                if i != (*p).Units2Indx[(oldNU as size_t)
-                    .wrapping_add(1 as std::ffi::c_int as size_t)
-                    .wrapping_sub(1 as std::ffi::c_int as size_t)
+                if i != (*p).Units2Indx[(oldNU as usize)
+                    .wrapping_add(1 as std::ffi::c_int as usize)
+                    .wrapping_sub(1 as std::ffi::c_int as usize)
                     as usize] as std::ffi::c_uint
                 {
                     let mut ptr: *mut std::ffi::c_void = Ppmd8_AllocUnits(
@@ -1326,8 +1320,8 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
                     }
                     oldPtr = ((*p).Base).offset((*c).Union4.Stats as isize) as *mut std::ffi::c_void
                         as *mut CPpmd_State as *mut std::ffi::c_void;
-                    let mut d: *mut UInt32 = ptr as *mut UInt32;
-                    let mut z: *const UInt32 = oldPtr as *const UInt32;
+                    let mut d: *mut u32 = ptr as *mut u32;
+                    let mut z: *const u32 = oldPtr as *const u32;
                     let mut n: std::ffi::c_uint = oldNU;
                     loop {
                         *d.offset(0 as std::ffi::c_int as isize) =
@@ -1345,10 +1339,10 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
                     }
                     Ppmd8_InsertNode(p, oldPtr, i);
                     (*c).Union4.Stats =
-                        (ptr as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
+                        (ptr as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
                 }
             }
-            sum = (*c).Union2.SummFreq as UInt32;
+            sum = (*c).Union2.SummFreq as u32;
             sum = sum.wrapping_add(
                 ((3 as std::ffi::c_int as std::ffi::c_uint)
                     .wrapping_mul(ns1)
@@ -1366,8 +1360,7 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
             (*s_0).Symbol = (*c).Union2.State2.Symbol;
             (*s_0).Successor_0 = (*c).Union4.State4.Successor_0;
             (*s_0).Successor_1 = (*c).Union4.State4.Successor_1;
-            (*c).Union4.Stats =
-                (s_0 as *mut Byte).offset_from((*p).Base) as std::ffi::c_long as UInt32;
+            (*c).Union4.Stats = (s_0 as *mut u8).offset_from((*p).Base) as std::ffi::c_long as u32;
             if freq
                 < (124 as std::ffi::c_int / 4 as std::ffi::c_int - 1 as std::ffi::c_int)
                     as std::ffi::c_uint
@@ -1376,7 +1369,7 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
             } else {
                 freq = (124 as std::ffi::c_int - 4 as std::ffi::c_int) as std::ffi::c_uint;
             }
-            (*s_0).Freq = freq as Byte;
+            (*s_0).Freq = freq as u8;
             sum = freq.wrapping_add((*p).InitEsc).wrapping_add(
                 (ns > 2 as std::ffi::c_int as std::ffi::c_uint) as std::ffi::c_int
                     as std::ffi::c_uint,
@@ -1386,40 +1379,35 @@ pub unsafe extern "C" fn Ppmd8_UpdateModel(mut p: *mut CPpmd8) {
             as *mut std::ffi::c_void as *mut CPpmd_State)
             .offset(ns1 as isize)
             .offset(1 as std::ffi::c_int as isize);
-        let mut cf: UInt32 = 2 as std::ffi::c_int as UInt32
-            * sum.wrapping_add(6 as std::ffi::c_int as UInt32)
-            * fFreq;
-        let mut sf: UInt32 = s0.wrapping_add(sum);
+        let mut cf: u32 =
+            2 as std::ffi::c_int as u32 * sum.wrapping_add(6 as std::ffi::c_int as u32) * fFreq;
+        let mut sf: u32 = s0.wrapping_add(sum);
         (*s_1).Symbol = fSymbol;
-        (*c).NumStats = ns1.wrapping_add(1 as std::ffi::c_int as std::ffi::c_uint) as Byte;
+        (*c).NumStats = ns1.wrapping_add(1 as std::ffi::c_int as std::ffi::c_uint) as u8;
         Ppmd8State_SetSuccessor(s_1, maxSuccessor);
-        (*c).Flags = ((*c).Flags as std::ffi::c_int | flag as std::ffi::c_int) as Byte;
-        if cf < 6 as std::ffi::c_int as UInt32 * sf {
+        (*c).Flags = ((*c).Flags as std::ffi::c_int | flag as std::ffi::c_int) as u8;
+        if cf < 6 as std::ffi::c_int as u32 * sf {
             cf = (1 as std::ffi::c_int as std::ffi::c_uint)
                 .wrapping_add((cf > sf) as std::ffi::c_int as std::ffi::c_uint)
                 .wrapping_add(
-                    (cf >= 4 as std::ffi::c_int as UInt32 * sf) as std::ffi::c_int
-                        as std::ffi::c_uint,
+                    (cf >= 4 as std::ffi::c_int as u32 * sf) as std::ffi::c_int as std::ffi::c_uint,
                 );
-            sum = sum.wrapping_add(4 as std::ffi::c_int as UInt32);
+            sum = sum.wrapping_add(4 as std::ffi::c_int as u32);
         } else {
             cf = (4 as std::ffi::c_int as std::ffi::c_uint)
                 .wrapping_add(
-                    (cf > 9 as std::ffi::c_int as UInt32 * sf) as std::ffi::c_int
-                        as std::ffi::c_uint,
+                    (cf > 9 as std::ffi::c_int as u32 * sf) as std::ffi::c_int as std::ffi::c_uint,
                 )
                 .wrapping_add(
-                    (cf > 12 as std::ffi::c_int as UInt32 * sf) as std::ffi::c_int
-                        as std::ffi::c_uint,
+                    (cf > 12 as std::ffi::c_int as u32 * sf) as std::ffi::c_int as std::ffi::c_uint,
                 )
                 .wrapping_add(
-                    (cf > 15 as std::ffi::c_int as UInt32 * sf) as std::ffi::c_int
-                        as std::ffi::c_uint,
+                    (cf > 15 as std::ffi::c_int as u32 * sf) as std::ffi::c_int as std::ffi::c_uint,
                 );
             sum = sum.wrapping_add(cf);
         }
-        (*c).Union2.SummFreq = sum as UInt16;
-        (*s_1).Freq = cf as Byte;
+        (*c).Union2.SummFreq = sum as u16;
+        (*s_1).Freq = cf as u8;
         c = ((*p).Base).offset((*c).Suffix as isize) as *mut std::ffi::c_void
             as *mut CPpmd8_Context;
     }
@@ -1456,14 +1444,14 @@ unsafe extern "C" fn Ppmd8_Rescale(mut p: *mut CPpmd8) {
         .wrapping_add(adder)
         >> 1 as std::ffi::c_int;
     i = (*(*p).MinContext).NumStats as std::ffi::c_uint;
-    (*s).Freq = sumFreq as Byte;
+    (*s).Freq = sumFreq as u8;
     loop {
         s = s.offset(1);
         let mut freq: std::ffi::c_uint = (*s).Freq as std::ffi::c_uint;
         escFreq = escFreq.wrapping_sub(freq);
         freq = freq.wrapping_add(adder) >> 1 as std::ffi::c_int;
         sumFreq = sumFreq.wrapping_add(freq);
-        (*s).Freq = freq as Byte;
+        (*s).Freq = freq as u8;
         if freq > (*s.offset(-(1 as std::ffi::c_int) as isize)).Freq as std::ffi::c_uint {
             let mut tmp_0: CPpmd_State = *s;
             let mut s1: *mut CPpmd_State = s;
@@ -1504,7 +1492,7 @@ unsafe extern "C" fn Ppmd8_Rescale(mut p: *mut CPpmd8) {
         mc = (*p).MinContext;
         numStats = (*mc).NumStats as std::ffi::c_uint;
         numStatsNew = numStats.wrapping_sub(i);
-        (*mc).NumStats = numStatsNew as Byte;
+        (*mc).NumStats = numStatsNew as u8;
         n0 =
             numStats.wrapping_add(2 as std::ffi::c_int as std::ffi::c_uint) >> 1 as std::ffi::c_int;
         if numStatsNew == 0 as std::ffi::c_int as std::ffi::c_uint {
@@ -1524,16 +1512,15 @@ unsafe extern "C" fn Ppmd8_Rescale(mut p: *mut CPpmd8) {
                         .wrapping_add(0xC0 as std::ffi::c_int as std::ffi::c_uint)
                         >> 8 as std::ffi::c_int - 3 as std::ffi::c_int
                         & ((1 as std::ffi::c_int) << 3 as std::ffi::c_int) as std::ffi::c_uint,
-                ) as Byte;
+                ) as u8;
             s = &mut (*mc).Union2 as *mut C2RustUnnamed_0 as *mut CPpmd_State;
             *s = *stats;
-            (*s).Freq = freq_0 as Byte;
+            (*s).Freq = freq_0 as u8;
             (*p).FoundState = s;
             Ppmd8_InsertNode(
                 p,
                 stats as *mut std::ffi::c_void,
-                (*p).Units2Indx
-                    [(n0 as size_t).wrapping_sub(1 as std::ffi::c_int as size_t) as usize]
+                (*p).Units2Indx[(n0 as usize).wrapping_sub(1 as std::ffi::c_int as usize) as usize]
                     as std::ffi::c_uint,
             );
             return;
@@ -1541,17 +1528,16 @@ unsafe extern "C" fn Ppmd8_Rescale(mut p: *mut CPpmd8) {
         n1 = numStatsNew.wrapping_add(2 as std::ffi::c_int as std::ffi::c_uint)
             >> 1 as std::ffi::c_int;
         if n0 != n1 {
-            (*mc).Union4.Stats =
-                (ShrinkUnits(p, stats as *mut std::ffi::c_void, n0, n1) as *mut Byte)
-                    .offset_from((*p).Base) as std::ffi::c_long as UInt32;
+            (*mc).Union4.Stats = (ShrinkUnits(p, stats as *mut std::ffi::c_void, n0, n1) as *mut u8)
+                .offset_from((*p).Base) as std::ffi::c_long as u32;
         }
     }
     let mut mc_0: *mut CPpmd8_Context = (*p).MinContext;
     (*mc_0).Union2.SummFreq = sumFreq
         .wrapping_add(escFreq)
-        .wrapping_sub(escFreq >> 1 as std::ffi::c_int) as UInt16;
+        .wrapping_sub(escFreq >> 1 as std::ffi::c_int) as u16;
     (*mc_0).Flags =
-        ((*mc_0).Flags as std::ffi::c_int | (1 as std::ffi::c_int) << 2 as std::ffi::c_int) as Byte;
+        ((*mc_0).Flags as std::ffi::c_int | (1 as std::ffi::c_int) << 2 as std::ffi::c_int) as u8;
     (*p).FoundState = ((*p).Base).offset((*mc_0).Union4.Stats as isize) as *mut std::ffi::c_void
         as *mut CPpmd_State;
 }
@@ -1559,16 +1545,16 @@ unsafe extern "C" fn Ppmd8_Rescale(mut p: *mut CPpmd8) {
 pub unsafe extern "C" fn Ppmd8_MakeEscFreq(
     mut p: *mut CPpmd8,
     mut numMasked1: std::ffi::c_uint,
-    mut escFreq: *mut UInt32,
+    mut escFreq: *mut u32,
 ) -> *mut CPpmd_See {
     let mut see: *mut CPpmd_See = 0 as *mut CPpmd_See;
     let mut mc: *const CPpmd8_Context = (*p).MinContext;
     let mut numStats: std::ffi::c_uint = (*mc).NumStats as std::ffi::c_uint;
     if numStats != 0xFF as std::ffi::c_int as std::ffi::c_uint {
         see = ((*p).See[((*p).NS2Indx
-            [(numStats as size_t).wrapping_add(2 as std::ffi::c_int as size_t) as usize]
-            as std::ffi::c_uint as size_t)
-            .wrapping_sub(3 as std::ffi::c_int as size_t) as usize])
+            [(numStats as usize).wrapping_add(2 as std::ffi::c_int as usize) as usize]
+            as std::ffi::c_uint as usize)
+            .wrapping_sub(3 as std::ffi::c_int as usize) as usize])
             .as_mut_ptr()
             .offset(
                 ((*mc).Union2.SummFreq as std::ffi::c_uint
@@ -1589,23 +1575,23 @@ pub unsafe extern "C" fn Ppmd8_MakeEscFreq(
             .offset((*mc).Flags as std::ffi::c_int as isize);
         let summ: std::ffi::c_uint = (*see).Summ as std::ffi::c_uint;
         let r: std::ffi::c_uint = summ >> (*see).Shift as std::ffi::c_int;
-        (*see).Summ = summ.wrapping_sub(r) as UInt16;
+        (*see).Summ = summ.wrapping_sub(r) as u16;
         *escFreq = r.wrapping_add(
             (r == 0 as std::ffi::c_int as std::ffi::c_uint) as std::ffi::c_int as std::ffi::c_uint,
         );
     } else {
         see = &mut (*p).DummySee;
-        *escFreq = 1 as std::ffi::c_int as UInt32;
+        *escFreq = 1 as std::ffi::c_int as u32;
     }
     return see;
 }
 unsafe extern "C" fn Ppmd8_NextContext(mut p: *mut CPpmd8) {
     let mut c: PPMD8_CTX_PTR = ((*p).Base).offset(
-        ((*(*p).FoundState).Successor_0 as UInt32
-            | ((*(*p).FoundState).Successor_1 as UInt32) << 16 as std::ffi::c_int) as isize,
+        ((*(*p).FoundState).Successor_0 as u32
+            | ((*(*p).FoundState).Successor_1 as u32) << 16 as std::ffi::c_int) as isize,
     ) as *mut std::ffi::c_void as *mut CPpmd8_Context;
     if (*p).OrderFall == 0 as std::ffi::c_int as std::ffi::c_uint
-        && c as *const Byte >= (*p).UnitsStart as *const Byte
+        && c as *const u8 >= (*p).UnitsStart as *const u8
     {
         (*p).MinContext = c;
         (*p).MaxContext = (*p).MinContext;
@@ -1619,8 +1605,8 @@ pub unsafe extern "C" fn Ppmd8_Update1(mut p: *mut CPpmd8) {
     let mut freq: std::ffi::c_uint = (*s).Freq as std::ffi::c_uint;
     freq = freq.wrapping_add(4 as std::ffi::c_int as std::ffi::c_uint);
     (*(*p).MinContext).Union2.SummFreq =
-        ((*(*p).MinContext).Union2.SummFreq as std::ffi::c_int + 4 as std::ffi::c_int) as UInt16;
-    (*s).Freq = freq as Byte;
+        ((*(*p).MinContext).Union2.SummFreq as std::ffi::c_int + 4 as std::ffi::c_int) as u16;
+    (*s).Freq = freq as u8;
     if freq > (*s.offset(-(1 as std::ffi::c_int) as isize)).Freq as std::ffi::c_uint {
         SWAP_STATES(s, &mut *s.offset(-(1 as std::ffi::c_int) as isize));
         s = s.offset(-1);
@@ -1639,11 +1625,10 @@ pub unsafe extern "C" fn Ppmd8_Update1_0(mut p: *mut CPpmd8) {
     let summFreq: std::ffi::c_uint = (*mc).Union2.SummFreq as std::ffi::c_uint;
     (*p).PrevSuccess = ((2 as std::ffi::c_int as std::ffi::c_uint).wrapping_mul(freq) >= summFreq)
         as std::ffi::c_int as std::ffi::c_uint;
-    (*p).RunLength += (*p).PrevSuccess as Int32;
-    (*mc).Union2.SummFreq =
-        summFreq.wrapping_add(4 as std::ffi::c_int as std::ffi::c_uint) as UInt16;
+    (*p).RunLength += (*p).PrevSuccess as i32;
+    (*mc).Union2.SummFreq = summFreq.wrapping_add(4 as std::ffi::c_int as std::ffi::c_uint) as u16;
     freq = freq.wrapping_add(4 as std::ffi::c_int as std::ffi::c_uint);
-    (*s).Freq = freq as Byte;
+    (*s).Freq = freq as u8;
     if freq > 124 as std::ffi::c_int as std::ffi::c_uint {
         Ppmd8_Rescale(p);
     }
@@ -1656,8 +1641,8 @@ pub unsafe extern "C" fn Ppmd8_Update2(mut p: *mut CPpmd8) {
     freq = freq.wrapping_add(4 as std::ffi::c_int as std::ffi::c_uint);
     (*p).RunLength = (*p).InitRL;
     (*(*p).MinContext).Union2.SummFreq =
-        ((*(*p).MinContext).Union2.SummFreq as std::ffi::c_int + 4 as std::ffi::c_int) as UInt16;
-    (*s).Freq = freq as Byte;
+        ((*(*p).MinContext).Union2.SummFreq as std::ffi::c_int + 4 as std::ffi::c_int) as u16;
+    (*s).Freq = freq as u8;
     if freq > 124 as std::ffi::c_int as std::ffi::c_uint {
         Ppmd8_Rescale(p);
     }
