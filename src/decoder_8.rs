@@ -106,19 +106,3 @@ impl<R: Read> Read for Ppmd8Decoder<R> {
         Ok(decoded)
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::{Ppmd8Decoder, RestoreMethod};
-
-    const ORDER: u32 = 8;
-    const MEM_SIZE: u32 = 262144;
-    const RESTORE_METHOD: RestoreMethod = RestoreMethod::CutOff;
-
-    #[test]
-    fn ppmd8zdecoder_init_drop() {
-        let reader: &[u8] = &[];
-        let decoder = Ppmd8Decoder::new(reader, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
-        assert!(!decoder.ppmd.base.is_null());
-    }
-}

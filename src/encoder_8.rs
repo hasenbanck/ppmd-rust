@@ -54,7 +54,7 @@ impl<W: Write> Ppmd8Encoder<W> {
     /// Finishes the encoding process.
     ///
     /// Adds an end marker to the data if `with_end_marker` is set to `true`.
-    pub fn finish(mut self, with_end_marker: bool) -> Result<W, std::io::Error> {
+    pub fn finish(mut self, with_end_marker: bool) -> std::io::Result<W> {
         if with_end_marker {
             unsafe { encode_symbol(&mut self.ppmd, SYM_END) };
         }

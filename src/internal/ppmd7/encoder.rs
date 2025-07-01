@@ -1,72 +1,21 @@
 use super::*;
 
-pub unsafe fn range_encoder_init(p: *mut PPMd7) {
-    (*p).rc.enc.low = 0 as std::ffi::c_int as u64;
-    (*p).rc.enc.range = 0xFFFFFFFF as std::ffi::c_uint;
-    (*p).rc.enc.cache = 0 as std::ffi::c_int as u8;
-    (*p).rc.enc.cache_size = 1 as std::ffi::c_int as u64;
-}
-
-#[inline(never)]
-unsafe fn range_encoder_shift_low(p: *mut PPMd7) {
-    if ((*p).rc.enc.low as u32) < 0xFF000000 as std::ffi::c_uint || ((*p).rc.enc.low >> 32) != 0 {
-        let mut temp: u8 = (*p).rc.enc.cache;
-        loop {
-            ((*(*p).rc.enc.stream).write).expect("non-null function pointer")(
-                (*p).rc.enc.stream,
-                (temp as std::ffi::c_int + ((*p).rc.enc.low >> 32) as u8 as std::ffi::c_int) as u8,
-            );
-            temp = 0xFF as std::ffi::c_int as u8;
-            (*p).rc.enc.cache_size = ((*p).rc.enc.cache_size).wrapping_sub(1);
-            if !((*p).rc.enc.cache_size != 0 as std::ffi::c_int as u64) {
-                break;
-            }
-        }
-        (*p).rc.enc.cache = ((*p).rc.enc.low as u32 >> 24 as std::ffi::c_int) as u8;
-    }
-    (*p).rc.enc.cache_size = ((*p).rc.enc.cache_size).wrapping_add(1);
-    (*p).rc.enc.cache_size;
-    (*p).rc.enc.low = (((*p).rc.enc.low as u32) << 8 as std::ffi::c_int) as u64;
-}
-
-#[inline(always)]
-unsafe fn range_encoder_encode(p: *mut PPMd7, start: u32, size: u32) {
-    (*p).rc.enc.low = ((*p).rc.enc.low).wrapping_add((start * (*p).rc.enc.range) as u64);
-    (*p).rc.enc.range = (*p).rc.enc.range * size;
-}
-
-pub unsafe fn range_encoder_flush(p: *mut PPMd7) {
-    let mut i: std::ffi::c_uint = 0;
-    i = 0 as std::ffi::c_int as std::ffi::c_uint;
-    while i < 5 as std::ffi::c_int as std::ffi::c_uint {
-        range_encoder_shift_low(p);
-        i = i.wrapping_add(1);
-        i;
-    }
-}
-
-#[inline(always)]
-pub unsafe fn encode_symbol(p: *mut PPMd7, symbol: std::ffi::c_int) {
+pub(crate) unsafe fn encode_symbol<W: Write>(
+    p: *mut PPMd7<RangeEncoder<W>>,
+    symbol: std::ffi::c_int,
+) -> std::io::Result<()> {
     let mut charMask: [usize; 32] = [0; 32];
     if (*(*p).min_context).num_stats as std::ffi::c_int != 1 as std::ffi::c_int {
         let mut s: *mut State = ((*p).base).offset((*(*p).min_context).union4.stats as isize)
             as *mut std::ffi::c_void as *mut State;
         let mut sum: u32 = 0;
         let mut i: std::ffi::c_uint = 0;
-        (*p).rc.enc.range = (*p).rc.enc.range / (*(*p).min_context).union2.summ_freq as u32;
+        (*p).rc.range = (*p).rc.range / (*(*p).min_context).union2.summ_freq as u32;
         if (*s).symbol as std::ffi::c_int == symbol {
-            range_encoder_encode(p, 0 as std::ffi::c_int as u32, (*s).freq as u32);
-            if (*p).rc.enc.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                (*p).rc.enc.range <<= 8 as std::ffi::c_int;
-                range_encoder_shift_low(p);
-                if (*p).rc.enc.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                    (*p).rc.enc.range <<= 8 as std::ffi::c_int;
-                    range_encoder_shift_low(p);
-                }
-            }
+            (*p).rc.encode_final(0, (*s).freq as u32)?;
             (*p).found_state = s;
-            Update1_0(p);
-            return;
+            update1_0(p);
+            return Ok(());
         }
         (*p).prev_success = 0 as std::ffi::c_int as std::ffi::c_uint;
         sum = (*s).freq as u32;
@@ -75,18 +24,10 @@ pub unsafe fn encode_symbol(p: *mut PPMd7, symbol: std::ffi::c_int) {
         loop {
             s = s.offset(1);
             if (*s).symbol as std::ffi::c_int == symbol {
-                range_encoder_encode(p, sum, (*s).freq as u32);
-                if (*p).rc.enc.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                    (*p).rc.enc.range <<= 8 as std::ffi::c_int;
-                    range_encoder_shift_low(p);
-                    if (*p).rc.enc.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                        (*p).rc.enc.range <<= 8 as std::ffi::c_int;
-                        range_encoder_shift_low(p);
-                    }
-                }
+                (*p).rc.encode_final(sum, (*s).freq as u32)?;
                 (*p).found_state = s;
                 update1(p);
-                return;
+                return Ok(());
             }
             sum = sum.wrapping_add((*s).freq as u32);
             i = i.wrapping_sub(1);
@@ -94,15 +35,17 @@ pub unsafe fn encode_symbol(p: *mut PPMd7, symbol: std::ffi::c_int) {
                 break;
             }
         }
-        range_encoder_encode(
-            p,
+
+        (*p).rc.encode(
             sum,
             ((*(*p).min_context).union2.summ_freq as u32).wrapping_sub(sum),
         );
+
         (*p).hi_bits_flag = ((*(*p).found_state).symbol as std::ffi::c_uint)
             .wrapping_add(0xC0 as std::ffi::c_int as std::ffi::c_uint)
             >> 8 as std::ffi::c_int - 3 as std::ffi::c_int
             & ((1 as std::ffi::c_int) << 3 as std::ffi::c_int) as std::ffi::c_uint;
+
         let mut z: usize = 0;
         z = 0 as std::ffi::c_int as usize;
         while z
@@ -180,7 +123,7 @@ pub unsafe fn encode_symbol(p: *mut PPMd7, symbol: std::ffi::c_int) {
         ) as *mut u16;
         let s_0: *mut State = &mut (*(*p).min_context).union2 as *mut Union2 as *mut State;
         let mut pr: u32 = *prob as u32;
-        let bound: u32 = ((*p).rc.enc.range >> 14 as std::ffi::c_int) * pr;
+        let bound: u32 = ((*p).rc.range >> 14 as std::ffi::c_int) * pr;
         pr = pr.wrapping_sub(
             pr.wrapping_add(
                 ((1 as std::ffi::c_int) << 7 as std::ffi::c_int - 2 as std::ffi::c_int) as u32,
@@ -188,11 +131,7 @@ pub unsafe fn encode_symbol(p: *mut PPMd7, symbol: std::ffi::c_int) {
         );
         if (*s_0).symbol as std::ffi::c_int == symbol {
             *prob = pr.wrapping_add(((1 as std::ffi::c_int) << 7 as std::ffi::c_int) as u32) as u16;
-            (*p).rc.enc.range = bound;
-            if (*p).rc.enc.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                (*p).rc.enc.range <<= 8 as std::ffi::c_int;
-                range_encoder_shift_low(p);
-            }
+            (*p).rc.encode_bit_0(bound)?;
             let freq: std::ffi::c_uint = (*s_0).freq as std::ffi::c_uint;
             let c: *mut Context = ((*p).base).offset(
                 ((*s_0).successor_0 as u32 | ((*s_0).successor_1 as u32) << 16 as std::ffi::c_int)
@@ -214,12 +153,12 @@ pub unsafe fn encode_symbol(p: *mut PPMd7, symbol: std::ffi::c_int) {
             } else {
                 update_model(p);
             }
-            return;
+            return Ok(());
         }
         *prob = pr as u16;
         (*p).init_esc = (*p).exp_escape[(pr >> 10 as std::ffi::c_int) as usize] as std::ffi::c_uint;
-        (*p).rc.enc.low = ((*p).rc.enc.low).wrapping_add(bound as u64);
-        (*p).rc.enc.range = ((*p).rc.enc.range).wrapping_sub(bound);
+        (*p).rc.encode_bit_1(bound)?;
+
         let mut z_0: usize = 0;
         z_0 = 0 as std::ffi::c_int as usize;
         while z_0
@@ -256,24 +195,21 @@ pub unsafe fn encode_symbol(p: *mut PPMd7, symbol: std::ffi::c_int) {
         let mut mc: *mut Context = 0 as *mut Context;
         let mut i_0: std::ffi::c_uint = 0;
         let mut numMasked: std::ffi::c_uint = 0;
-        if (*p).rc.enc.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-            (*p).rc.enc.range <<= 8 as std::ffi::c_int;
-            range_encoder_shift_low(p);
-            if (*p).rc.enc.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                (*p).rc.enc.range <<= 8 as std::ffi::c_int;
-                range_encoder_shift_low(p);
-            }
-        }
+
+        (*p).rc.normalize_remote()?;
+
         mc = (*p).min_context;
         numMasked = (*mc).num_stats as std::ffi::c_uint;
+
         loop {
             (*p).order_fall = ((*p).order_fall).wrapping_add(1);
             (*p).order_fall;
             if (*mc).suffix == 0 {
-                return;
+                return Ok(());
             }
             mc = ((*p).base).offset((*mc).suffix as isize) as *mut std::ffi::c_void as *mut Context;
             i_0 = (*mc).num_stats as std::ffi::c_uint;
+
             if !(i_0 == numMasked) {
                 break;
             }
@@ -364,18 +300,10 @@ pub unsafe fn encode_symbol(p: *mut PPMd7, symbol: std::ffi::c_int) {
                         }
                     }
                 }
-                (*p).rc.enc.range = (*p).rc.enc.range / sum_0;
-                range_encoder_encode(p, low, freq_0);
-                if (*p).rc.enc.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                    (*p).rc.enc.range <<= 8 as std::ffi::c_int;
-                    range_encoder_shift_low(p);
-                    if (*p).rc.enc.range < (1 as std::ffi::c_int as u32) << 24 as std::ffi::c_int {
-                        (*p).rc.enc.range <<= 8 as std::ffi::c_int;
-                        range_encoder_shift_low(p);
-                    }
-                }
+                (*p).rc.range = (*p).rc.range / sum_0;
+                (*p).rc.encode_final(low, freq_0)?;
                 update2(p);
-                return;
+                return Ok(());
             }
             sum_0 = (sum_0 as std::ffi::c_uint).wrapping_add(
                 (*s_1).freq as std::ffi::c_uint
@@ -388,10 +316,15 @@ pub unsafe fn encode_symbol(p: *mut PPMd7, symbol: std::ffi::c_int) {
                 break;
             }
         }
-        let total: u32 = sum_0.wrapping_add(escFreq);
-        (*see).summ = ((*see).summ as u32).wrapping_add(total) as u16;
-        (*p).rc.enc.range = (*p).rc.enc.range / total;
-        range_encoder_encode(p, sum_0, escFreq);
+
+        {
+            let total: u32 = sum_0.wrapping_add(escFreq);
+            (*see).summ = ((*see).summ as u32).wrapping_add(total) as u16;
+
+            (*p).rc.range = (*p).rc.range / total;
+            (*p).rc.encode(sum_0, escFreq);
+        }
+
         let mut s2_0: *const State = ((*p).base).offset((*(*p).min_context).union4.stats as isize)
             as *mut std::ffi::c_void as *mut State;
         s_1 = s_1.offset(-1);

@@ -39,15 +39,6 @@ pub struct IByteOut_ {
 }
 pub type IByteOutPtr = *const IByteOut_;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct ISzAlloc {
-    pub alloc: Option<fn(ISzAllocPtr, usize) -> *mut std::ffi::c_void>,
-    pub free: Option<fn(ISzAllocPtr, *mut std::ffi::c_void)>,
-}
-
-pub type ISzAllocPtr = *const ISzAlloc;
-
 #[derive(Copy, Clone, Default)]
 #[repr(C, packed)]
 pub struct See {
