@@ -1,13 +1,12 @@
 use std::io::Read;
 
-use ppmd_sys::{
-    CPpmd7, Ppmd7_Alloc, Ppmd7_Construct, Ppmd7_Free, Ppmd7_Init, Ppmd7z_DecodeSymbol,
-    Ppmd7z_RangeDec_Init, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER,
-    PPMD7_SYM_END,
-};
-
 use super::{byte_reader::ByteReader, memory::Memory};
 use crate::Error;
+use ppmd_sys::native::ppmd7::{CPpmd7, Ppmd7_Alloc, Ppmd7_Construct, Ppmd7_Free, Ppmd7_Init};
+use ppmd_sys::native::ppmd7dec::{Ppmd7z_DecodeSymbol, Ppmd7z_RangeDec_Init};
+use ppmd_sys::{
+    PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, PPMD7_SYM_END,
+};
 
 /// A decoder to decode PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Decoder<R: Read> {

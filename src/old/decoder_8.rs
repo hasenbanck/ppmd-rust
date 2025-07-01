@@ -1,12 +1,10 @@
 use std::io::Read;
 
-use ppmd_sys::{
-    CPpmd8, Ppmd8_Alloc, Ppmd8_Construct, Ppmd8_DecodeSymbol, Ppmd8_Free, Ppmd8_Init,
-    Ppmd8_Init_RangeDec, PPMD8_MAX_ORDER, PPMD8_MIN_ORDER, PPMD8_SYM_END,
-};
-
 use super::{byte_reader::ByteReader, memory::Memory};
 use crate::{Error, RestoreMethod};
+use ppmd_sys::native::ppmd8::{CPpmd8, Ppmd8_Alloc, Ppmd8_Construct, Ppmd8_Free, Ppmd8_Init};
+use ppmd_sys::native::ppmd8dec::{Ppmd8_DecodeSymbol, Ppmd8_Init_RangeDec};
+use ppmd_sys::{PPMD8_MAX_ORDER, PPMD8_MIN_ORDER, PPMD8_SYM_END};
 
 /// A decoder to decode PPMd8 (PPMdI) compressed data.
 pub struct Ppmd8Decoder<R: Read> {

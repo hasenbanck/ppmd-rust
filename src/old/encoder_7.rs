@@ -1,12 +1,12 @@
 use std::io::Write;
 
-use ppmd_sys::{
-    CPpmd7, Ppmd7_Alloc, Ppmd7_Construct, Ppmd7_Init, Ppmd7z_EncodeSymbols, Ppmd7z_Flush_RangeEnc,
-    Ppmd7z_Init_RangeEnc, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER,
-};
-
 use super::{byte_writer::ByteWriter, memory::Memory};
 use crate::Error;
+use ppmd_sys::native::ppmd7::{CPpmd7, Ppmd7_Alloc, Ppmd7_Construct, Ppmd7_Init};
+use ppmd_sys::native::ppmd7enc::{
+    Ppmd7z_EncodeSymbols, Ppmd7z_Flush_RangeEnc, Ppmd7z_Init_RangeEnc,
+};
+use ppmd_sys::{PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER};
 
 /// An encoder to encode data using PPMd7 (PPMdH) with the 7z range coder.
 pub struct Ppmd7Encoder<W: Write> {
