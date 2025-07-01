@@ -35,7 +35,7 @@ impl<W: Write> Ppmd7Encoder<W> {
             stream: writer.byte_out_ptr(),
         };
 
-        let mut ppmd = PPMd7::new(RangeCoder { enc: encoder }, order, mem_size)?;
+        let mut ppmd = PPMd7::construct(RangeCoder { enc: encoder }, order, mem_size)?;
 
         unsafe { range_encoder_init(&mut ppmd) };
 
@@ -93,38 +93,48 @@ impl<W: Write> Write for Ppmd7Encoder<W> {
 mod test {
     use std::io::{Read, Write};
 
-    use crate::{Ppmd7Decoder, Ppmd7Encoder};
+    use super::{super::decoder_7::Ppmd7Decoder, Ppmd7Encoder};
 
     const ORDER: u32 = 8;
     const MEM_SIZE: u32 = 262144;
 
     #[test]
-    fn ppmd7encoder_init_drop() {
-        let writer = Vec::new();
-        let encoder = Ppmd7Encoder::new(writer, ORDER, MEM_SIZE).unwrap();
-        assert!(!encoder.ppmd.base.is_null());
-    }
+    fn ppmd7encoder_without_end_marker() {
+        let test_data = include_str!("../tests/fixtures/text/apache2.txt");
 
-    #[test]
-    fn ppmd7encoder_encode_decode() {
-        let test_data = "Lorem ipsum dolor sit amet. ";
-
-        let mut writer = Vec::new();
+        let mut data = Vec::new();
         {
-            let mut encoder = Ppmd7Encoder::new(&mut writer, ORDER, MEM_SIZE).unwrap();
+            let mut encoder = Ppmd7Encoder::new(&mut data, ORDER, MEM_SIZE).unwrap();
             encoder.write_all(test_data.as_bytes()).unwrap();
-            encoder.flush().unwrap();
+            encoder.finish(false).unwrap();
         }
 
-        let mut decoder = Ppmd7Decoder::new(writer.as_slice(), ORDER, MEM_SIZE).unwrap();
+        let mut decoder = Ppmd7Decoder::new(data.as_slice(), ORDER, MEM_SIZE).unwrap();
 
         let mut decoded = vec![0; test_data.len()];
         decoder.read_exact(&mut decoded).unwrap();
 
-        assert_eq!(decoded.as_slice(), test_data.as_bytes());
+        let decoded_data = String::from_utf8(decoded).unwrap();
+        assert_eq!(decoded_data, test_data);
+    }
+
+    #[test]
+    fn ppmd7encoder_with_end_marker() {
+        let test_data = include_str!("../tests/fixtures/text/apache2.txt");
+
+        let mut data = Vec::new();
+        {
+            let mut encoder = Ppmd7Encoder::new(&mut data, ORDER, MEM_SIZE).unwrap();
+            encoder.write_all(test_data.as_bytes()).unwrap();
+            encoder.finish(true).unwrap();
+        }
+
+        let mut decoder = Ppmd7Decoder::new(data.as_slice(), ORDER, MEM_SIZE).unwrap();
+
+        let mut decoded = Vec::new();
+        decoder.read_to_end(&mut decoded).unwrap();
 
         let decoded_data = String::from_utf8(decoded).unwrap();
-
         assert_eq!(decoded_data, test_data);
     }
 }

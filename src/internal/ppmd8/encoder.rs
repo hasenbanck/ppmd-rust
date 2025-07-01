@@ -1,11 +1,11 @@
 use super::*;
 
-pub unsafe fn range_encoder_init(p: *mut Ppmd8) {
+pub unsafe fn range_encoder_init(p: *mut PPMd8) {
     (*p).low = 0;
     (*p).range = 0xFFFFFFFF;
 }
 
-pub unsafe fn range_encoder_flush(p: *mut Ppmd8) {
+pub unsafe fn range_encoder_flush(p: *mut PPMd8) {
     let mut i: std::ffi::c_uint = 0;
     i = 0 as std::ffi::c_int as std::ffi::c_uint;
     while i < 4 as std::ffi::c_int as std::ffi::c_uint {
@@ -20,13 +20,13 @@ pub unsafe fn range_encoder_flush(p: *mut Ppmd8) {
 }
 
 #[inline(always)]
-unsafe fn range_encoder_encode(p: *mut Ppmd8, start: u32, size: u32, total: u32) {
+unsafe fn range_encoder_encode(p: *mut PPMd8, start: u32, size: u32, total: u32) {
     (*p).range = (*p).range / total;
     (*p).low = ((*p).low).wrapping_add(start * (*p).range);
     (*p).range = (*p).range * size;
 }
 
-pub unsafe fn encode_symbol(p: *mut Ppmd8, symbol: std::ffi::c_int) {
+pub unsafe fn encode_symbol(p: *mut PPMd8, symbol: std::ffi::c_int) {
     let mut charMask: [usize; 32] = [0; 32];
     if (*(*p).min_context).num_stats as std::ffi::c_int != 0 as std::ffi::c_int {
         let mut s: *mut State = ((*p).base).offset((*(*p).min_context).union4.stats as isize)
