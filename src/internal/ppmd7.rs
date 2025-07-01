@@ -69,7 +69,6 @@ pub union RangeCoder {
     pub enc: RangeEncoder,
 }
 
-#[repr(C)]
 pub struct PPMd7 {
     pub min_context: *mut Context,
     pub max_context: *mut Context,
@@ -112,7 +111,7 @@ impl Drop for PPMd7 {
 }
 
 impl PPMd7 {
-    pub(crate) fn new(rc: RangeCoder, order: u32, mem_size: u32) -> Result<Self, Error> {
+    pub(crate) fn construct(rc: RangeCoder, order: u32, mem_size: u32) -> Result<Self, Error> {
         let mut units2index = [0u8; 128];
         let mut index2units = [0u8; 40];
 

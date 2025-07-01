@@ -39,7 +39,7 @@ impl<R: Read> Ppmd7Decoder<R> {
             return Err(Error::RangeDecoderInitialization);
         }
 
-        let ppmd = PPMd7::new(RangeCoder { dec: decoder }, order, mem_size)?;
+        let ppmd = PPMd7::construct(RangeCoder { dec: decoder }, order, mem_size)?;
 
         Ok(Self {
             ppmd,

@@ -2,19 +2,15 @@ use std::{io::Write, mem::ManuallyDrop};
 
 use crate::{
     byte_writer::ByteWriter,
-    internal::ppmd8::{
-        alloc, construct, encode_symbol, free, init, range_encoder_flush, range_encoder_init, Ppmd8,
-    },
-    memory::Memory,
+    internal::ppmd8::{encode_symbol, range_encoder_flush, range_encoder_init, PPMd8, StreamUnion},
     Error, RestoreMethod, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER,
     SYM_END,
 };
 
 /// A encoder to compress data using PPMd8 (PPMdI rev.1).
 pub struct Ppmd8Encoder<W: Write> {
-    ppmd: Ppmd8,
+    ppmd: PPMd8,
     writer: ByteWriter<W>,
-    memory: Memory,
 }
 
 impl<W: Write> Ppmd8Encoder<W> {
@@ -34,41 +30,24 @@ impl<W: Write> Ppmd8Encoder<W> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<Ppmd8>() };
-        unsafe { construct(&mut ppmd) };
-
-        let mut memory = Memory::new(mem_size);
-
-        let success = unsafe { alloc(&mut ppmd, mem_size, memory.allocation()) };
-
-        if success == 0 {
-            return Err(Error::MemoryAllocation);
-        }
-
         let mut writer = ByteWriter::new(writer);
-        ppmd.stream.output = writer.byte_out_ptr();
+        let stream = StreamUnion {
+            output: writer.byte_out_ptr(),
+        };
+
+        let mut ppmd = PPMd8::construct(stream, order, mem_size, restore_method)?;
 
         unsafe { range_encoder_init(&mut ppmd) }
 
-        unsafe { init(&mut ppmd, order, restore_method as _) };
-
-        Ok(Self {
-            ppmd,
-            writer,
-            memory,
-        })
+        Ok(Self { ppmd, writer })
     }
 
     /// Returns the inner writer.
     pub fn into_inner(self) -> W {
-        let mut manual_drop_self = ManuallyDrop::new(self);
-        unsafe {
-            free(
-                &mut manual_drop_self.ppmd,
-                manual_drop_self.memory.allocation(),
-            )
-        }
+        let manual_drop_self = ManuallyDrop::new(self);
         let writer = unsafe { std::ptr::read(&manual_drop_self.writer) };
+        let ppmd = unsafe { std::ptr::read(&manual_drop_self.ppmd) };
+        drop(ppmd);
         writer.inner.writer
     }
 
@@ -110,32 +89,24 @@ impl<W: Write> Write for Ppmd8Encoder<W> {
 
 #[cfg(test)]
 mod test {
-
     use std::io::{Read, Write};
 
-    use crate::{Ppmd8Decoder, Ppmd8Encoder, RestoreMethod};
+    use super::{super::decoder_8::Ppmd8Decoder, Ppmd8Encoder, RestoreMethod};
 
     const ORDER: u32 = 8;
     const MEM_SIZE: u32 = 262144;
     const RESTORE_METHOD: RestoreMethod = RestoreMethod::Restart;
 
     #[test]
-    fn ppmd8encoder_init_drop() {
-        let writer = Vec::new();
-        let encoder = Ppmd8Encoder::new(writer, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
-        assert!(!encoder.ppmd.base.is_null());
-    }
-
-    #[test]
-    fn ppmd8encoder_encode_decode() {
-        let test_data = "Lorem ipsum dolor sit amet. ";
+    fn ppmd8encoder_without_end_marker() {
+        let test_data = include_str!("../tests/fixtures/text/apache2.txt");
 
         let mut writer = Vec::new();
         {
             let mut encoder =
                 Ppmd8Encoder::new(&mut writer, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
             encoder.write_all(test_data.as_bytes()).unwrap();
-            encoder.flush().unwrap();
+            encoder.finish(false).unwrap();
         }
 
         let mut decoder =
@@ -144,10 +115,29 @@ mod test {
         let mut decoded = vec![0; test_data.len()];
         decoder.read_exact(&mut decoded).unwrap();
 
-        assert_eq!(decoded.as_slice(), test_data.as_bytes());
+        let decoded_data = String::from_utf8(decoded).unwrap();
+        assert_eq!(decoded_data, test_data);
+    }
+
+    #[test]
+    fn ppmd8encoder_with_end_marker() {
+        let test_data = include_str!("../tests/fixtures/text/apache2.txt");
+
+        let mut writer = Vec::new();
+        {
+            let mut encoder =
+                Ppmd8Encoder::new(&mut writer, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
+            encoder.write_all(test_data.as_bytes()).unwrap();
+            encoder.finish(true).unwrap();
+        }
+
+        let mut decoder =
+            Ppmd8Decoder::new(writer.as_slice(), ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
+
+        let mut decoded = Vec::new();
+        decoder.read_to_end(&mut decoded).unwrap();
 
         let decoded_data = String::from_utf8(decoded).unwrap();
-
         assert_eq!(decoded_data, test_data);
     }
 }

@@ -1,6 +1,6 @@
 use super::*;
 
-pub unsafe fn range_decoder_init(p: *mut Ppmd8) -> i32 {
+pub unsafe fn range_decoder_init(p: *mut PPMd8) -> i32 {
     let mut i: std::ffi::c_uint = 0;
     (*p).code = 0 as std::ffi::c_int as u32;
     (*p).range = 0xFFFFFFFF as std::ffi::c_uint;
@@ -17,14 +17,14 @@ pub unsafe fn range_decoder_init(p: *mut Ppmd8) -> i32 {
 }
 
 #[inline(always)]
-unsafe fn range_decoder_decode(p: *mut Ppmd8, mut start: u32, size: u32) {
+unsafe fn range_decoder_decode(p: *mut PPMd8, mut start: u32, size: u32) {
     start = start * (*p).range;
     (*p).low = ((*p).low).wrapping_add(start);
     (*p).code = ((*p).code).wrapping_sub(start);
     (*p).range = (*p).range * size;
 }
 
-pub unsafe fn decode_symbol(p: *mut Ppmd8) -> std::ffi::c_int {
+pub unsafe fn decode_symbol(p: *mut PPMd8) -> std::ffi::c_int {
     let mut charMask: [usize; 32] = [0; 32];
     if (*(*p).min_context).num_stats as std::ffi::c_int != 0 as std::ffi::c_int {
         let mut s: *mut State = ((*p).base).offset((*(*p).min_context).union4.stats as isize)

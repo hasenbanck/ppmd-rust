@@ -2,17 +2,15 @@ use std::{io::Read, mem::ManuallyDrop};
 
 use crate::{
     byte_reader::ByteReader,
-    internal::ppmd8::{alloc, construct, decode_symbol, free, init, range_decoder_init, Ppmd8},
-    memory::Memory,
+    internal::ppmd8::{decode_symbol, range_decoder_init, PPMd8, StreamUnion},
     Error, RestoreMethod, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER,
     SYM_END,
 };
 
 /// A decoder to decompress data using PPMd8 (PPMdI rev.1).
 pub struct Ppmd8Decoder<R: Read> {
-    ppmd: Ppmd8,
+    ppmd: PPMd8,
     reader: ByteReader<R>,
-    memory: Memory,
     finished: bool,
 }
 
@@ -33,19 +31,12 @@ impl<R: Read> Ppmd8Decoder<R> {
             return Err(Error::InvalidParameter);
         }
 
-        let mut ppmd = unsafe { std::mem::zeroed::<Ppmd8>() };
-        unsafe { construct(&mut ppmd) };
-
-        let mut memory = Memory::new(mem_size);
-
-        let success = unsafe { alloc(&mut ppmd, mem_size, memory.allocation()) };
-
-        if success == 0 {
-            return Err(Error::MemoryAllocation);
-        }
-
         let mut reader = ByteReader::new(reader);
-        ppmd.stream.input = reader.byte_in_ptr();
+        let stream = StreamUnion {
+            input: reader.byte_in_ptr(),
+        };
+
+        let mut ppmd = PPMd8::construct(stream, order, mem_size, restore_method)?;
 
         let success = unsafe { range_decoder_init(&mut ppmd) };
 
@@ -53,33 +44,20 @@ impl<R: Read> Ppmd8Decoder<R> {
             return Err(Error::RangeDecoderInitialization);
         }
 
-        unsafe { init(&mut ppmd, order, restore_method as _) };
-
         Ok(Self {
             ppmd,
             reader,
-            memory,
             finished: false,
         })
     }
 
     /// Returns the inner reader.
     pub fn into_inner(self) -> R {
-        let mut manual_drop_self = ManuallyDrop::new(self);
-        unsafe {
-            free(
-                &mut manual_drop_self.ppmd,
-                manual_drop_self.memory.allocation(),
-            )
-        }
+        let manual_drop_self = ManuallyDrop::new(self);
         let reader = unsafe { std::ptr::read(&manual_drop_self.reader) };
+        let ppmd = unsafe { std::ptr::read(&manual_drop_self.ppmd) };
+        drop(ppmd);
         reader.inner.reader
-    }
-}
-
-impl<R: Read> Drop for Ppmd8Decoder<R> {
-    fn drop(&mut self) {
-        unsafe { free(&mut self.ppmd, self.memory.allocation()) }
     }
 }
 
