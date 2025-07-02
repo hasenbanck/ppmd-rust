@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crate::{
-    internal::ppmd8::{encode_symbol, PPMd8, RangeEncoder},
+    internal::ppmd8::{PPMd8, RangeEncoder},
     Error, RestoreMethod, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER,
     SYM_END,
 };
@@ -43,7 +43,7 @@ impl<W: Write> Ppmd8Encoder<W> {
     /// Adds an end marker to the data if `with_end_marker` is set to `true`.
     pub fn finish(mut self, with_end_marker: bool) -> std::io::Result<W> {
         if with_end_marker {
-            unsafe { encode_symbol(&mut self.ppmd, SYM_END)? };
+            unsafe { self.ppmd.encode_symbol(SYM_END)? };
         }
         self.flush()?;
         Ok(self.into_inner())
@@ -57,7 +57,7 @@ impl<W: Write> Write for Ppmd8Encoder<W> {
         }
 
         for &byte in buf.iter() {
-            unsafe { encode_symbol(&mut self.ppmd as *mut _, byte as i32)? };
+            unsafe { self.ppmd.encode_symbol(byte as i32)? };
         }
 
         Ok(buf.len())

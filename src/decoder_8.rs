@@ -1,7 +1,7 @@
 use std::io::Read;
 
 use crate::{
-    internal::ppmd8::{decode_symbol, PPMd8, RangeDecoder},
+    internal::ppmd8::{PPMd8, RangeDecoder},
     Error, RestoreMethod, PPMD8_MAX_MEM_SIZE, PPMD8_MAX_ORDER, PPMD8_MIN_MEM_SIZE, PPMD8_MIN_ORDER,
     SYM_END,
 };
@@ -58,7 +58,7 @@ impl<R: Read> Read for Ppmd8Decoder<R> {
 
         unsafe {
             for byte in buf.iter_mut() {
-                sym = decode_symbol(&mut self.ppmd)?;
+                sym = self.ppmd.decode_symbol()?;
 
                 if sym < 0 {
                     break;
