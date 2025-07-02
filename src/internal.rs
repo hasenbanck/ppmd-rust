@@ -41,6 +41,13 @@ struct State {
     successor_1: u16,
 }
 
+impl State {
+    unsafe fn set_successor(&mut self, v: u32) {
+        self.successor_0 = v as u16;
+        self.successor_1 = (v >> 16) as u16;
+    }
+}
+
 #[derive(Copy, Clone)]
 #[repr(C, packed)]
 struct State2 {
