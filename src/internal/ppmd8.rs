@@ -2,18 +2,17 @@ mod decoder;
 mod encoder;
 mod range_coding;
 
+use std::{
+    alloc::{alloc_zeroed, dealloc, Layout},
+    io::{Read, Write},
+    mem::{swap, ManuallyDrop},
+    ptr::{addr_of_mut, NonNull},
+};
+
 pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
 
 use super::*;
 use crate::{Error, RestoreMethod};
-use std::mem::swap;
-use std::ptr::addr_of_mut;
-use std::{
-    alloc::{alloc_zeroed, dealloc, Layout},
-    io::{Read, Write},
-    mem::ManuallyDrop,
-    ptr::NonNull,
-};
 
 const MAX_FREQ: u8 = 124;
 const UNIT_SIZE: isize = 12;
@@ -1539,7 +1538,7 @@ impl<RC> PPMd8<RC> {
     pub unsafe fn make_esc_freq(
         &mut self,
         numMasked1: std::ffi::c_uint,
-        escFreq: *mut u32,
+        escFreq: &mut u32,
     ) -> *mut See {
         let mut see: *mut See = 0 as *mut See;
         let mut mc = self.min_context;
