@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crate::{
-    internal::ppmd7::{encode_symbol, PPMd7, RangeEncoder},
+    internal::ppmd7::{PPMd7, RangeEncoder},
     Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
 
@@ -38,7 +38,7 @@ impl<W: Write> Ppmd7Encoder<W> {
     pub fn finish(mut self, with_end_marker: bool) -> std::io::Result<W> {
         unsafe {
             if with_end_marker {
-                encode_symbol(&mut self.ppmd, SYM_END)?;
+                self.ppmd.encode_symbol(SYM_END)?;
             }
             self.flush()?;
             Ok(self.into_inner())
@@ -53,7 +53,7 @@ impl<W: Write> Write for Ppmd7Encoder<W> {
         }
 
         for &byte in buf.iter() {
-            unsafe { encode_symbol(&mut self.ppmd, byte as i32)? };
+            unsafe { self.ppmd.encode_symbol(byte as i32)? };
         }
 
         Ok(buf.len())
