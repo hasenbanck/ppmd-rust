@@ -12,6 +12,9 @@ pub struct Ppmd8Decoder<R: Read> {
     finished: bool,
 }
 
+unsafe impl<R: Read> Send for Ppmd8Decoder<R> {}
+unsafe impl<R: Read> Sync for Ppmd8Decoder<R> {}
+
 impl<R: Read> Ppmd8Decoder<R> {
     /// Creates a new [`Ppmd8Decoder`] which provides a reader over the uncompressed data.
     ///
