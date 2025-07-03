@@ -1,11 +1,11 @@
 [package]
 name = "ppmd-rust"
 description = "PPMd compression / decompression"
-homepage = "https://github.com/hasenbanck/sevenz-rust2/tree/main/ppmd-rust"
-repository = "https://github.com/hasenbanck/sevenz-rust2/tree/main/ppmd-rust"
+homepage = "https://github.com/hasenbanck/ppmd-rust"
+repository = "https://github.com/hasenbanck/ppmd-rust"
 edition = "2021"
 rust-version = "1.82"
-version = "1.1.1"
+version = "1.1.2"
 keywords = ["ppmd"]
 license = "CC0-1.0"
 exclude = ["tests/fixtures"]
