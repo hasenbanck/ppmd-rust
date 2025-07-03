@@ -2,7 +2,7 @@ use super::*;
 use crate::{SYM_END, SYM_ERROR};
 
 impl<R: Read> PPMd7<RangeDecoder<R>> {
-    pub fn decode_symbol(&mut self) -> Result<i32, std::io::Error> {
+    pub(crate) fn decode_symbol(&mut self) -> Result<i32, std::io::Error> {
         unsafe {
             let mut char_mask: [u8; 256];
 

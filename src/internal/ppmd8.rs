@@ -50,10 +50,10 @@ pub(crate) struct PPMd8<RC> {
     min_context: NonNull<Context>,
     max_context: NonNull<Context>,
     found_state: NonNull<State>,
-    order_fall: std::ffi::c_uint,
-    init_esc: std::ffi::c_uint,
-    prev_success: std::ffi::c_uint,
-    max_order: std::ffi::c_uint,
+    order_fall: u32,
+    init_esc: u32,
+    prev_success: u32,
+    max_order: u32,
     restore_method: RestoreMethod,
     run_length: i32,
     init_rl: i32,
@@ -198,11 +198,11 @@ impl<RC> PPMd8<RC> {
         }
     }
 
-    unsafe fn insert_node(&mut self, mut node: NonNull<Node>, index: std::ffi::c_uint) {
+    unsafe fn insert_node(&mut self, mut node: NonNull<Node>, index: u32) {
         unsafe {
-            node.as_mut().stamp = 0xFFFFFFFF as std::ffi::c_uint;
+            node.as_mut().stamp = 0xFFFFFFFF;
             node.as_mut().next = self.free_list[index as usize];
-            node.as_mut().nu = self.index2units[index as usize] as std::ffi::c_uint;
+            node.as_mut().nu = self.index2units[index as usize] as u32;
             self.free_list[index as usize] =
                 u32::try_from(node.cast().offset_from(self.memory_ptr))
                     .expect("Failed to convert ptr to offset");
@@ -1235,7 +1235,7 @@ impl<RC> PPMd8<RC> {
             }
         }
 
-        if s.as_ref().freq as std::ffi::c_int == 0 as std::ffi::c_int {
+        if s.as_ref().freq == 0 {
             // Remove all items with freq == 0
             let mut i = 0;
             loop {

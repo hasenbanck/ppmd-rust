@@ -54,11 +54,11 @@ pub(crate) struct PPMd7<RC> {
     min_context: NonNull<Context>,
     max_context: NonNull<Context>,
     found_state: NonNull<State>,
-    order_fall: std::ffi::c_uint,
-    init_esc: std::ffi::c_uint,
-    prev_success: std::ffi::c_uint,
-    max_order: std::ffi::c_uint,
-    hi_bits_flag: std::ffi::c_uint,
+    order_fall: u32,
+    init_esc: u32,
+    prev_success: u32,
+    max_order: u32,
+    hi_bits_flag: u32,
     run_length: i32,
     init_rl: i32,
     size: u32,
@@ -190,13 +190,12 @@ impl<RC> PPMd7<RC> {
         }
     }
 
-    unsafe fn insert_node(&mut self, node: NonNull<u8>, indx: std::ffi::c_uint) {
+    unsafe fn insert_node(&mut self, node: NonNull<u8>, indx: u32) {
         *node.cast::<u32>().as_mut() = self.free_list[indx as usize];
-        self.free_list[indx as usize] =
-            node.offset_from(self.memory_ptr) as std::ffi::c_long as u32;
+        self.free_list[indx as usize] = node.offset_from(self.memory_ptr) as u32;
     }
 
-    unsafe fn remove_node(&mut self, indx: std::ffi::c_uint) -> NonNull<u8> {
+    unsafe fn remove_node(&mut self, indx: u32) -> NonNull<u8> {
         let node = self
             .memory_ptr
             .offset(self.free_list[indx as usize] as isize)

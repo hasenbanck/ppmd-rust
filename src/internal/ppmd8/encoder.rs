@@ -1,7 +1,7 @@
 use super::*;
 
 impl<W: Write> PPMd8<RangeEncoder<W>> {
-    pub unsafe fn encode_symbol(&mut self, symbol: std::ffi::c_int) -> std::io::Result<()> {
+    pub(crate) unsafe fn encode_symbol(&mut self, symbol: i32) -> std::io::Result<()> {
         let mut char_mask: [u8; 256];
 
         if self.min_context.as_ref().num_stats != 0 {
