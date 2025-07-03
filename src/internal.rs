@@ -56,9 +56,13 @@ struct State {
 }
 
 impl State {
-    unsafe fn set_successor(&mut self, v: u32) {
+    fn set_successor(&mut self, v: u32) {
         self.successor_0 = v as u16;
         self.successor_1 = (v >> 16) as u16;
+    }
+
+    fn get_successor(&self) -> u32 {
+        self.successor_0 as u32 + ((self.successor_1 as u32) << 16)
     }
 }
 
@@ -74,6 +78,17 @@ struct State2 {
 struct State4 {
     successor_0: u16,
     successor_1: u16,
+}
+
+impl State4 {
+    fn set_successor(&mut self, v: u32) {
+        self.successor_0 = v as u16;
+        self.successor_1 = (v >> 16) as u16;
+    }
+
+    fn get_successor(&self) -> u32 {
+        self.successor_0 as u32 + ((self.successor_1 as u32) << 16)
+    }
 }
 
 #[derive(Copy, Clone)]
