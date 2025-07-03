@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.1 - 2025-07-03
+
+### Fixed
+
+- Fixed errors in the ported code that created different PPMd code for both PPMd7 and PPMd7:
+  (https://github.com/hasenbanck/ppmd-rust/issues/3)
+
+### Added
+
+- Added bigger test corpus to verify implementation.
+
 ## 1.1.0 - 2025-06-28
 
 ### Added
