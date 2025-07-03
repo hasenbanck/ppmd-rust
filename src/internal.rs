@@ -32,6 +32,20 @@ struct See {
     count: u8,
 }
 
+impl See {
+    fn update(&mut self) {
+        if (self.shift as i32) < 7 && {
+            self.count = self.count.wrapping_sub(1);
+            self.count as i32 == 0
+        } {
+            self.summ = ((self.summ as i32) << 1) as u16;
+            let fresh0 = self.shift;
+            self.shift = self.shift.wrapping_add(1);
+            self.count = (3 << fresh0 as i32) as u8;
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 #[repr(C, packed)]
 struct State {
