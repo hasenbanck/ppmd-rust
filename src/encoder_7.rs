@@ -36,13 +36,11 @@ impl<W: Write> Ppmd7Encoder<W> {
     ///
     /// Adds an end marker to the data if `with_end_marker` is set to `true`.
     pub fn finish(mut self, with_end_marker: bool) -> std::io::Result<W> {
-        unsafe {
-            if with_end_marker {
-                self.ppmd.encode_symbol(SYM_END)?;
-            }
-            self.flush()?;
-            Ok(self.into_inner())
+        if with_end_marker {
+            self.ppmd.encode_symbol(SYM_END)?;
         }
+        self.flush()?;
+        Ok(self.into_inner())
     }
 }
 
@@ -53,7 +51,7 @@ impl<W: Write> Write for Ppmd7Encoder<W> {
         }
 
         for &byte in buf.iter() {
-            unsafe { self.ppmd.encode_symbol(byte as i32)? };
+            self.ppmd.encode_symbol(byte as i32)?;
         }
 
         Ok(buf.len())

@@ -50,17 +50,15 @@ impl<R: Read> Read for Ppmd7Decoder<R> {
         let mut sym = 0;
         let mut decoded = 0;
 
-        unsafe {
-            for byte in buf.iter_mut() {
-                sym = self.ppmd.decode_symbol()?;
+        for byte in buf.iter_mut() {
+            sym = self.ppmd.decode_symbol()?;
 
-                if sym < 0 {
-                    break;
-                }
-
-                *byte = sym as u8;
-                decoded += 1;
+            if sym < 0 {
+                break;
             }
+
+            *byte = sym as u8;
+            decoded += 1;
         }
 
         let code = self.ppmd.range_decoder_code();
