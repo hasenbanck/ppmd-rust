@@ -28,11 +28,6 @@ static K_INIT_BIN_ESC: [u16; 8] = [
     0x3CDD, 0x1F3F, 0x59BF, 0x48F3, 0x64A1, 0x5ABC, 0x6632, 0x6051,
 ];
 
-enum SeeSource {
-    Dummy,
-    Table(usize, usize),
-}
-
 #[derive(Copy, Clone)]
 #[repr(C)]
 struct Node {

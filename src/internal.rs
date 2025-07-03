@@ -24,6 +24,11 @@ const PPMD_N3: u32 = 4;
 const PPMD_N4: u32 = (128 + 3 - PPMD_N1 - 2 * PPMD_N2 - 3 * PPMD_N3) / 4;
 const PPMD_NUM_INDEXES: u32 = PPMD_N1 + PPMD_N2 + PPMD_N3 + PPMD_N4;
 
+enum SeeSource {
+    Dummy,
+    Table(usize, usize),
+}
+
 #[derive(Copy, Clone, Default)]
 #[repr(C, packed)]
 struct See {
@@ -39,9 +44,9 @@ impl See {
             self.count as i32 == 0
         } {
             self.summ = ((self.summ as i32) << 1) as u16;
-            let fresh0 = self.shift;
+            let fresh = self.shift;
             self.shift = self.shift.wrapping_add(1);
-            self.count = (3 << fresh0 as i32) as u8;
+            self.count = (3 << fresh as i32) as u8;
         }
     }
 }

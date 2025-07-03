@@ -179,6 +179,17 @@ impl<RC> PPMd7<RC> {
         Ok(ppmd)
     }
 
+    unsafe fn ptr_of_offset(&self, offset: u32) -> NonNull<u8> {
+        unsafe { self.memory_ptr.offset(offset as isize) }
+    }
+
+    unsafe fn offset_for_ptr(&self, ptr: NonNull<u8>) -> u32 {
+        unsafe {
+            let offset = ptr.offset_from(self.memory_ptr);
+            u32::try_from(offset).expect("Failed to convert ptr to offset")
+        }
+    }
+
     unsafe fn insert_node(&mut self, node: NonNull<u8>, indx: std::ffi::c_uint) {
         *node.cast::<u32>().as_mut() = self.free_list[indx as usize];
         self.free_list[indx as usize] =
@@ -987,71 +998,75 @@ impl<RC> PPMd7<RC> {
             .cast::<State>();
     }
 
-    pub unsafe fn make_esc_freq(
-        &mut self,
-        numMasked: std::ffi::c_uint,
-        escFreq: &mut u32,
-    ) -> *mut See {
-        let mut see;
-        let mut mc = self.min_context;
-        let numStats: std::ffi::c_uint = mc.as_ref().num_stats as std::ffi::c_uint;
-        if numStats != 256 as std::ffi::c_int as std::ffi::c_uint {
-            let nonMasked: std::ffi::c_uint = numStats.wrapping_sub(numMasked);
-            see =
-                self.see[self.ns2index
-                    [(nonMasked as usize).wrapping_sub(1 as std::ffi::c_int as usize)]
-                    as std::ffi::c_uint as usize]
-                    .as_mut_ptr()
-                    .offset(
-                        (nonMasked
-                            < (self
-                                .memory_ptr
-                                .offset(mc.as_ref().suffix as isize)
-                                .cast::<Context>()
-                                .as_ref()
-                                .num_stats as std::ffi::c_uint)
-                                .wrapping_sub(numStats)) as std::ffi::c_int
-                            as isize,
-                    )
-                    .offset((2 as std::ffi::c_int as std::ffi::c_uint).wrapping_mul(
-                        ((mc.as_ref().union2.summ_freq as std::ffi::c_uint)
-                            < (11 as std::ffi::c_int as std::ffi::c_uint).wrapping_mul(numStats))
-                            as std::ffi::c_int as std::ffi::c_uint,
-                    ) as isize)
-                    .offset((4 as std::ffi::c_int as std::ffi::c_uint).wrapping_mul(
-                        (numMasked > nonMasked) as std::ffi::c_int as std::ffi::c_uint,
-                    ) as isize)
-                    .offset(self.hi_bits_flag as isize);
-            let summ: std::ffi::c_uint = (*see).summ as std::ffi::c_uint;
-            let r: std::ffi::c_uint = summ >> (*see).shift as std::ffi::c_int;
-            (*see).summ = summ.wrapping_sub(r) as u16;
-            *escFreq = r.wrapping_add(
-                (r == 0 as std::ffi::c_int as std::ffi::c_uint) as std::ffi::c_int
-                    as std::ffi::c_uint,
-            );
-        } else {
-            see = &mut self.dummy_see;
-            *escFreq = 1 as std::ffi::c_int as u32;
-        }
+    unsafe fn make_esc_freq(&mut self, num_masked: u32, esc_freq: &mut u32) -> SeeSource {
+        unsafe {
+            let num_stats = self.min_context.as_ref().num_stats as u32;
 
-        see
+            if num_stats != 256 {
+                let (base_context_idx, see_table_hash) =
+                    self.calculate_see_table_hash(num_masked, num_stats);
+
+                let see = &mut self.see[base_context_idx][see_table_hash];
+
+                // If (see.summ) field is larger than 16-bit, we need only low 16 bits of summ.
+                let summ = see.summ as u32;
+                let r = summ >> see.shift as i32;
+                see.summ = (summ - r) as u16;
+                *esc_freq = r + (r == 0) as u32;
+
+                SeeSource::Table(base_context_idx, see_table_hash)
+            } else {
+                *esc_freq = 1;
+                SeeSource::Dummy
+            }
+        }
+    }
+
+    fn get_see(&mut self, see_source: SeeSource) -> &mut See {
+        match see_source {
+            SeeSource::Dummy => &mut self.dummy_see,
+            SeeSource::Table(i, k) => &mut self.see[i][k],
+        }
+    }
+
+    unsafe fn calculate_see_table_hash(
+        &mut self,
+        num_masked: u32,
+        num_stats: u32,
+    ) -> (usize, usize) {
+        unsafe {
+            let non_masked = num_stats - num_masked;
+            let base_context_idx = self.ns2index[(non_masked as usize) - 1] as usize;
+
+            let mc = self.min_context.as_ref();
+            let suffix_context = self.get_context(mc.suffix);
+            let suffix_num_stats = suffix_context.as_ref().num_stats as u32;
+            let summ_freq = mc.union2.summ_freq as u32;
+
+            let context_hierarchy_hash = (non_masked < (suffix_num_stats - num_stats)) as usize;
+            let freq_distribution_hash = 2 * (summ_freq < (11 * num_stats)) as usize;
+            let symbol_masking_ratio_hash = 4 * (num_masked > non_masked) as usize;
+            let symbol_characteristics_hash = self.hi_bits_flag as usize;
+
+            let see_table_hash = context_hierarchy_hash
+                + freq_distribution_hash
+                + symbol_masking_ratio_hash
+                + symbol_characteristics_hash;
+
+            (base_context_idx, see_table_hash)
+        }
     }
 
     unsafe fn next_context(&mut self) {
-        let c = self
-            .memory_ptr
-            .offset(
-                (self.found_state.as_ref().successor_0 as u32
-                    | (self.found_state.as_ref().successor_1 as u32) << 16 as std::ffi::c_int)
-                    as isize,
-            )
-            .cast::<Context>();
-        if self.order_fall == 0 as std::ffi::c_int as std::ffi::c_uint && c.cast() > self.text {
-            self.min_context = c;
-            self.max_context = self.min_context;
-        } else {
-            self.update_model();
-        };
+        unsafe {
+            let c = self.get_context(self.found_state.as_ref().get_successor());
+            if self.order_fall == 0 && c.cast() > self.text {
+                self.min_context = c;
+                self.max_context = self.min_context;
+            } else {
+                self.update_model();
+            };
+        }
     }
 
     pub unsafe fn update1(&mut self) {
@@ -1107,6 +1122,85 @@ impl<RC> PPMd7<RC> {
             self.rescale();
         }
         self.update_model();
+    }
+
+    unsafe fn update_bin(&mut self, mut s: NonNull<State>) {
+        unsafe {
+            let freq = s.as_ref().freq as u32;
+            self.found_state = s;
+            self.prev_success = 1;
+            self.run_length += 1;
+            s.as_mut().freq += ((freq < 128) as u32) as u8;
+            self.next_context();
+        }
+    }
+
+    unsafe fn mask_symbols(char_mask: &mut [u8; 256], s: NonNull<State>, mut s2: NonNull<State>) {
+        unsafe {
+            char_mask[s.as_ref().symbol as usize] = 0;
+            while s2 < s {
+                let sym0 = s2.offset(0).as_ref().symbol as u32;
+                let sym1 = s2.offset(1).as_ref().symbol as u32;
+                s2 = s2.offset(2);
+                char_mask[sym0 as usize] = 0;
+                char_mask[sym1 as usize] = 0;
+            }
+        }
+    }
+
+    const fn hi_bits_flag3(symbol: u32) -> u32 {
+        (symbol + 0xC0) >> (8 - 3) & (1 << 3)
+    }
+
+    const fn hi_bits_flag4(symbol: u32) -> u32 {
+        (symbol + 0xC0) >> (8 - 4) & (1 << 4)
+    }
+
+    unsafe fn get_bin_summ(&mut self) -> &mut u16 {
+        unsafe {
+            let state = self.get_single_state(self.min_context);
+
+            let hi_bits_flag3 = Self::hi_bits_flag3(self.found_state.as_ref().symbol as u32);
+            let symbol = state.as_ref().symbol as u32;
+            let hi_bits_flag4 = Self::hi_bits_flag4(symbol);
+
+            self.hi_bits_flag = hi_bits_flag3;
+
+            let freq_bin_idx = state.as_ref().freq as usize;
+
+            let num_stats = self
+                .get_context(self.min_context.as_ref().suffix)
+                .as_ref()
+                .num_stats as usize;
+
+            let context_idx = (self.prev_success
+                + ((self.run_length as u32 >> 26) & 0x20)
+                + self.ns2bs_index[num_stats - 1] as u32
+                + hi_bits_flag4
+                + hi_bits_flag3) as usize;
+
+            &mut self.bin_summ[freq_bin_idx - 1][context_idx]
+        }
+    }
+
+    #[inline(always)]
+    unsafe fn get_context(&mut self, suffix: u32) -> NonNull<Context> {
+        unsafe { self.ptr_of_offset(suffix).cast() }
+    }
+
+    #[inline(always)]
+    fn get_single_state(&mut self, context: NonNull<Context>) -> NonNull<State> {
+        let context_ptr = context.as_ptr();
+        unsafe {
+            // Safety: We know that context is not null, so a field address from it can't be null.
+            let single_state = addr_of_mut!((*context_ptr).union2).cast();
+            NonNull::new_unchecked(single_state)
+        }
+    }
+
+    #[inline(always)]
+    unsafe fn get_multi_state_stats(&mut self, mut context: NonNull<Context>) -> NonNull<State> {
+        unsafe { self.ptr_of_offset(context.as_mut().union4.stats).cast() }
     }
 }
 
