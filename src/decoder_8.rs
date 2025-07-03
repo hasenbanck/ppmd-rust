@@ -57,7 +57,16 @@ impl<R: Read> Read for Ppmd8Decoder<R> {
         let mut decoded = 0;
 
         for byte in buf.iter_mut() {
-            sym = self.ppmd.decode_symbol()?;
+            match self.ppmd.decode_symbol() {
+                Ok(symbol) => sym = symbol,
+                Err(err) => {
+                    if err.kind() == std::io::ErrorKind::UnexpectedEof {
+                        self.finished = true;
+                        return Ok(decoded);
+                    }
+                    return Err(err);
+                }
+            }
 
             if sym < 0 {
                 break;
