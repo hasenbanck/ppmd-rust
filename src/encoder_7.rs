@@ -10,6 +10,9 @@ pub struct Ppmd7Encoder<W: Write> {
     ppmd: PPMd7<RangeEncoder<W>>,
 }
 
+unsafe impl<W: Write> Send for Ppmd7Encoder<W> {}
+unsafe impl<W: Write> Sync for Ppmd7Encoder<W> {}
+
 impl<W: Write> Ppmd7Encoder<W> {
     /// Creates a new [`Ppmd7Encoder`] which provides a writer over the compressed data.
     ///
