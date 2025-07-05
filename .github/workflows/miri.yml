@@ -17,7 +17,7 @@ jobs:
           toolchain: nightly
           components: miri, rust-std
       - name: Miri
-        run: cargo +nightly miri test --lib encoder_7::test::ppmd7encoder_without_end_marker
+        run: cargo +nightly miri test --features unstable-tagged-offsets --lib encoder_7::test::ppmd7encoder_without_end_marker
 
   ppmd7withMarker:
     runs-on: ubuntu-24.04
@@ -29,7 +29,7 @@ jobs:
           toolchain: nightly
           components: miri, rust-std
       - name: Miri
-        run: cargo +nightly miri test --lib encoder_7::test::ppmd7encoder_with_end_marker
+        run: cargo +nightly miri test --features unstable-tagged-offsets --lib encoder_7::test::ppmd7encoder_with_end_marker
 
   ppmd8withoutMarker:
     runs-on: ubuntu-24.04
@@ -41,7 +41,7 @@ jobs:
           toolchain: nightly
           components: miri, rust-std
       - name: Miri
-        run: cargo +nightly miri test --lib encoder_8::test::ppmd8encoder_without_end_marker
+        run: cargo +nightly miri test --features unstable-tagged-offsets --lib encoder_8::test::ppmd8encoder_without_end_marker
 
   ppmd8withMarker:
     runs-on: ubuntu-24.04
@@ -53,4 +53,4 @@ jobs:
           toolchain: nightly
           components: miri, rust-std
       - name: Miri
-        run: cargo +nightly miri test --lib encoder_8::test::ppmd8encoder_with_end_marker
+        run: cargo +nightly miri test --features unstable-tagged-offsets --lib encoder_8::test::ppmd8encoder_with_end_marker

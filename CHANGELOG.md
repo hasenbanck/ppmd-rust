@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.1 - 2025-07-05
+
+### Added
+
+- Add an `unstable-tagged-offsets` unstable feature used to validate the proper function of the implementation. It is
+  not activated as a general safety feature, since it would reduce the maximal allowed memory size and in such break
+  compatibility with existing data.
+
 ## 1.2.0 - 2025-07-03
 
 ### Added

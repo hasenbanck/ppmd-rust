@@ -88,7 +88,7 @@ impl<R: Read> PPMd7<RangeDecoder<R>> {
 
                 while mc.as_ref().num_stats as u32 == num_masked {
                     self.order_fall += 1;
-                    if mc.as_ref().suffix == 0 {
+                    if mc.as_ref().suffix.is_null() {
                         return Ok(SYM_END);
                     }
                     mc = self.get_context(mc.as_ref().suffix);

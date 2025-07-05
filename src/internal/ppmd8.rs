@@ -6,7 +6,7 @@ use std::{
     alloc::{alloc_zeroed, dealloc, Layout},
     io::{Read, Write},
     mem::{swap, ManuallyDrop},
-    ptr::{addr_of_mut, NonNull},
+    ptr::NonNull,
 };
 
 pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
@@ -32,8 +32,12 @@ static K_INIT_BIN_ESC: [u16; 8] = [
 #[repr(C)]
 struct Node {
     stamp: u32,
-    next: u32,
+    next: TaggedOffset,
     nu: u32,
+}
+
+impl Pointee for Node {
+    const TAG: u32 = TAG_NODE;
 }
 
 #[derive(Copy, Clone)]
@@ -43,7 +47,11 @@ struct Context {
     flags: u8,
     union2: Union2,
     union4: Union4,
-    suffix: u32,
+    suffix: TaggedOffset,
+}
+
+impl Pointee for Context {
+    const TAG: u32 = TAG_CONTEXT;
 }
 
 pub(crate) struct PPMd8<RC> {
@@ -66,7 +74,7 @@ pub(crate) struct PPMd8<RC> {
     units_start: NonNull<u8>,
     index2units: [u8; 40],
     units2index: [u8; 128],
-    free_list: [u32; 38],
+    free_list: [TaggedOffset; 38],
     stamps: [u32; 38],
     ns2bs_index: [u8; 256],
     ns2index: [u8; 260],
@@ -84,6 +92,22 @@ impl<RC> Drop for PPMd8<RC> {
         unsafe {
             dealloc(self.memory_ptr.as_ptr(), self.memory_layout);
         }
+    }
+}
+
+impl<RC> MemoryAllocator for PPMd8<RC> {
+    fn base_memory_ptr(&self) -> NonNull<u8> {
+        self.memory_ptr
+    }
+
+    #[cfg(not(feature = "unstable-tagged-offsets"))]
+    fn units_start(&self) -> NonNull<u8> {
+        self.units_start
+    }
+
+    #[cfg(feature = "unstable-tagged-offsets")]
+    fn size(&self) -> u32 {
+        self.size
     }
 }
 
@@ -169,7 +193,7 @@ impl<RC> PPMd8<RC> {
             units_start: NonNull::dangling(),
             index2units,
             units2index,
-            free_list: [0; 38],
+            free_list: [TaggedOffset::null(); 38],
             stamps: [0; 38],
             ns2bs_index,
             ns2index,
@@ -187,15 +211,8 @@ impl<RC> PPMd8<RC> {
         Ok(ppmd)
     }
 
-    unsafe fn ptr_of_offset(&self, offset: u32) -> NonNull<u8> {
-        unsafe { self.memory_ptr.offset(offset as isize) }
-    }
-
-    unsafe fn offset_for_ptr(&self, ptr: NonNull<u8>) -> u32 {
-        unsafe {
-            let offset = ptr.offset_from(self.memory_ptr);
-            u32::try_from(offset).expect("Failed to convert ptr to offset")
-        }
+    unsafe fn offset_for_ptr<T: Pointee>(&self, ptr: NonNull<T>) -> TaggedOffset {
+        unsafe { TaggedOffset::from_ptr(self, ptr) }
     }
 
     unsafe fn insert_node(&mut self, mut node: NonNull<Node>, index: u32) {
@@ -203,22 +220,18 @@ impl<RC> PPMd8<RC> {
             node.as_mut().stamp = 0xFFFFFFFF;
             node.as_mut().next = self.free_list[index as usize];
             node.as_mut().nu = self.index2units[index as usize] as u32;
-            self.free_list[index as usize] =
-                u32::try_from(node.cast().offset_from(self.memory_ptr))
-                    .expect("Failed to convert ptr to offset");
+            self.free_list[index as usize] = self.offset_for_ptr(node);
             self.stamps[index as usize] = self.stamps[index as usize].wrapping_add(1);
         }
     }
 
-    unsafe fn remove_node(&mut self, index: u32) -> NonNull<u8> {
+    unsafe fn remove_node(&mut self, index: u32) -> NonNull<Node> {
         let index = index as usize;
-        let node = self
-            .memory_ptr
-            .offset(self.free_list[index] as isize)
-            .cast::<Node>();
+        let node_offset = self.free_list[index];
+        let node = node_offset.as_ptr::<Node, _>(self);
         self.free_list[index] = node.as_ref().next;
         self.stamps[index] = self.stamps[index].wrapping_sub(1);
-        node.cast()
+        node
     }
 
     unsafe fn split_block(&mut self, mut ptr: NonNull<u8>, old_index: u32, new_index: u32) {
@@ -248,7 +261,7 @@ impl<RC> PPMd8<RC> {
     /// record.
     unsafe fn glue_free_blocks(&mut self) {
         unsafe {
-            let mut n = 0;
+            let mut n = TaggedOffset::null();
 
             self.glue_count = (1 << 13) as u32;
             self.stamps = [0; 38];
@@ -264,40 +277,40 @@ impl<RC> PPMd8<RC> {
     }
 
     /// Glue free blocks.
-    unsafe fn glue_blocks(&mut self, n: &mut u32) {
+    unsafe fn glue_blocks(&mut self, n: *mut TaggedOffset) {
         unsafe {
             let mut prev = n;
             for i in 0..PPMD_NUM_INDEXES {
                 let mut next = self.free_list[i as usize];
-                self.free_list[i as usize] = 0;
-                while next != 0 {
-                    let mut node = self.ptr_of_offset(next).cast::<Node>();
+                self.free_list[i as usize] = TaggedOffset::null();
+                while next.is_not_null() {
+                    let mut node = next.as_ptr::<Node, _>(self);
                     let mut nu = node.as_ref().nu;
                     *prev = next;
                     next = node.as_ref().next;
                     if nu != 0 {
-                        prev = &mut node.as_mut().next;
+                        prev = &raw mut node.as_mut().next;
                         loop {
                             let node2 = node.offset(nu as isize).as_mut();
                             if node2.stamp != EMPTY_NODE {
                                 break;
                             }
                             nu += node2.nu;
-                            node.as_mut().nu = nu;
+                            (*node.as_ptr()).nu = nu;
                             node2.nu = 0;
                         }
                     }
                 }
             }
-            *prev = 0;
+            *prev = TaggedOffset::null();
         }
     }
 
     /// Fill lists of free blocks.
-    unsafe fn fill_list(&mut self, mut n: u32) {
+    unsafe fn fill_list(&mut self, mut n: TaggedOffset) {
         unsafe {
-            while n != 0 {
-                let mut node = self.ptr_of_offset(n).cast::<Node>();
+            while n.is_not_null() {
+                let mut node = n.as_ptr::<Node, _>(self);
                 let mut nu = node.as_ref().nu;
                 n = node.as_ref().next;
                 if nu == 0 {
@@ -327,8 +340,8 @@ impl<RC> PPMd8<RC> {
         unsafe {
             if self.glue_count == 0 {
                 self.glue_free_blocks();
-                if self.free_list[index as usize] != 0 {
-                    return Some(self.remove_node(index));
+                if self.free_list[index as usize].is_not_null() {
+                    return Some(self.remove_node(index).cast());
                 }
             }
 
@@ -347,12 +360,12 @@ impl<RC> PPMd8<RC> {
                         None
                     };
                 }
-                if self.free_list[i as usize] != 0 {
+                if self.free_list[i as usize].is_not_null() {
                     break;
                 }
             }
 
-            let block = self.remove_node(i);
+            let block = self.remove_node(i).cast();
             self.split_block(block, i, index);
             Some(block)
         }
@@ -360,8 +373,8 @@ impl<RC> PPMd8<RC> {
 
     unsafe fn alloc_units(&mut self, index: u32) -> Option<NonNull<u8>> {
         unsafe {
-            if self.free_list[index as usize] != 0 {
-                return Some(self.remove_node(index));
+            if self.free_list[index as usize].is_not_null() {
+                return Some(self.remove_node(index).cast());
             }
             let num_bytes = self.index2units[index as usize] as u32 * UNIT_SIZE as u32;
             let lo = self.lo_unit;
@@ -389,8 +402,8 @@ impl<RC> PPMd8<RC> {
                 return old_ptr;
             }
 
-            if self.free_list[i1 as usize] != 0 {
-                let ptr = self.remove_node(i1);
+            if self.free_list[i1 as usize].is_not_null() {
+                let ptr = self.remove_node(i1).cast();
                 std::ptr::copy(
                     old_ptr.as_ptr(),
                     ptr.as_ptr(),
@@ -442,14 +455,14 @@ impl<RC> PPMd8<RC> {
             for i in 0..PPMD_NUM_INDEXES {
                 let mut cnt = count[i as usize];
                 if cnt != 0 {
-                    let mut prev = self.free_list.as_mut_ptr().offset(i as isize).cast::<u32>();
+                    let mut prev = &raw mut self.free_list[i as usize];
                     let mut n = *prev;
                     self.stamps[i as usize] = self.stamps[i as usize].wrapping_sub(cnt);
                     loop {
-                        let mut node = self.ptr_of_offset(n).cast::<Node>();
+                        let mut node = n.as_ptr::<Node, _>(self);
                         n = node.as_ref().next;
                         if node.as_ref().stamp != 0 {
-                            prev = addr_of_mut!(node.as_mut().next);
+                            prev = &raw mut node.as_mut().next;
                             continue;
                         }
 
@@ -467,10 +480,10 @@ impl<RC> PPMd8<RC> {
     #[inline(never)]
     unsafe fn restart_model(&mut self) {
         unsafe {
-            self.free_list = [0; 38];
+            self.free_list = [TaggedOffset::null(); 38];
             self.stamps = [0; 38];
 
-            self.text = self.ptr_of_offset(self.align_offset);
+            self.text = self.memory_ptr.offset(self.align_offset as isize);
             self.hi_unit = self.text.offset(self.size as isize);
             self.units_start = self
                 .hi_unit
@@ -501,15 +514,15 @@ impl<RC> PPMd8<RC> {
                 mc.flags = 0;
                 mc.num_stats = (256 - 1) as u8;
                 mc.union2.summ_freq = (256 + 1) as u16;
-                mc.union4.stats = self.offset_for_ptr(s.cast());
-                mc.suffix = 0;
+                mc.union4.stats = self.offset_for_ptr(s);
+                mc.suffix = TaggedOffset::null();
             }
 
             (0..256).for_each(|i| {
                 let s = s.offset(i).as_mut();
                 s.symbol = i as u8;
                 s.freq = 1;
-                s.set_successor(0);
+                s.set_successor(TaggedOffset::null());
             });
 
             let mut i = 0;
@@ -559,7 +572,7 @@ impl<RC> PPMd8<RC> {
             let mut s = self
                 .shrink_units(states.cast(), old_nu, (num_stats + 2) >> 1)
                 .cast::<State>();
-            ctx.as_mut().union4.stats = self.offset_for_ptr(s.cast());
+            ctx.as_mut().union4.stats = self.offset_for_ptr(s);
 
             scale |= (ctx.as_ref().union2.summ_freq as u32 >= 1 << 15) as u32;
 
@@ -600,40 +613,40 @@ impl<RC> PPMd8<RC> {
     /// It removes RAW-successors and NULL-successors that are not Order-0, and it
     /// removes contexts when it has no successors. If the (multi_state.stats) is
     /// close to (units_start), it moves it up.
-    unsafe fn cut_off(&mut self, mut ctx: NonNull<Context>, order: u32) -> u32 {
+    unsafe fn cut_off(&mut self, mut ctx: NonNull<Context>, order: u32) -> TaggedOffset {
         unsafe {
             let mut ns = ctx.as_ref().num_stats as i32;
 
             if ns == 0 {
                 let mut successor = ctx.as_ref().union4.state4.get_successor();
-                if self.ptr_of_offset(successor) >= self.units_start {
+                if successor.is_real_context(self) {
                     if order < self.max_order {
-                        successor = self.cut_off(self.ptr_of_offset(successor).cast(), order + 1);
+                        let context = self.get_context(successor);
+                        successor = self.cut_off(context, order + 1);
                     } else {
-                        successor = 0;
+                        successor = TaggedOffset::null();
                     }
                     ctx.as_mut().union4.state4.set_successor(successor);
-                    if successor != 0 || order <= 9 {
+                    if successor.is_not_null() || order <= 9 {
                         // O_BOUND
-                        return self.offset_for_ptr(ctx.cast());
+                        return self.offset_for_ptr(ctx);
                     }
                 }
                 self.special_free_unit(ctx.cast());
-                return 0;
+                return TaggedOffset::null();
             }
 
             let nu = (ns as u32).wrapping_add(2) >> 1;
 
             let index = self.units2index[(nu as usize) - 1] as u32;
-            let mut stats = self
-                .ptr_of_offset(ctx.as_ref().union4.stats)
-                .cast::<State>();
+            let stats_offset = ctx.as_ref().union4.stats;
+            let mut stats = stats_offset.as_ptr::<State, _>(self);
 
-            if stats.cast::<u8>().offset_from(self.units_start) as u32 <= (1 << 14) as u32
-                && ctx.as_ref().union4.stats <= self.free_list[index as usize]
+            if stats.cast::<u8>().offset_from(self.units_start) <= (1 << 14)
+                && stats_offset.get_offset() <= self.free_list[index as usize].get_offset()
             {
                 let ptr = self.remove_node(index);
-                ctx.as_mut().union4.stats = self.offset_for_ptr(ptr.cast());
+                ctx.as_mut().union4.stats = self.offset_for_ptr(ptr.cast::<State>());
 
                 std::ptr::copy(
                     stats.cast().as_ptr(),
@@ -655,7 +668,7 @@ impl<RC> PPMd8<RC> {
 
             loop {
                 let successor = s.as_ref().get_successor();
-                if self.ptr_of_offset(successor) < self.units_start {
+                if !successor.is_real_context(self) {
                     let fresh = ns;
                     ns -= 1;
                     let mut s2 = stats.offset(fresh as isize);
@@ -665,13 +678,13 @@ impl<RC> PPMd8<RC> {
                         }
                     } else {
                         swap(s.as_mut(), s2.as_mut());
-                        s2.as_mut().set_successor(0);
+                        s2.as_mut().set_successor(TaggedOffset::null());
                     }
                 } else if order < self.max_order {
                     let context = self.get_context(successor);
                     s.as_mut().set_successor(self.cut_off(context, order + 1));
                 } else {
-                    s.as_mut().set_successor(0);
+                    s.as_mut().set_successor(TaggedOffset::null());
                 }
 
                 s = s.offset(-1);
@@ -684,7 +697,7 @@ impl<RC> PPMd8<RC> {
                 if ns < 0 {
                     self.free_units(stats.cast(), nu);
                     self.special_free_unit(ctx.cast());
-                    return 0;
+                    return TaggedOffset::null();
                 }
                 ctx.as_mut().num_stats = ns as u8;
                 if ns == 0 {
@@ -706,7 +719,7 @@ impl<RC> PPMd8<RC> {
                 }
             }
 
-            self.offset_for_ptr(ctx.cast())
+            self.offset_for_ptr(ctx)
         }
     }
 
@@ -727,7 +740,7 @@ impl<RC> PPMd8<RC> {
 
     unsafe fn restore_model(&mut self, ctx_error: NonNull<Context>) {
         unsafe {
-            self.text = self.ptr_of_offset(self.align_offset).offset(0);
+            self.text = self.memory_ptr.offset(self.align_offset as isize);
 
             // We go here in cases of error of allocation for context (c1)
             // Order(min_context) < Order(ctx_error) <= Order(max_context)
@@ -740,7 +753,7 @@ impl<RC> PPMd8<RC> {
             while c != ctx_error {
                 c.as_mut().num_stats -= 1;
                 if c.as_ref().num_stats as i32 == 0 {
-                    s = self.ptr_of_offset(c.as_ref().union4.stats).cast::<State>();
+                    s = self.get_multi_state_stats(c);
                     c.as_mut().flags = (((c.as_ref().flags & FLAG_PREV_HIGH) as u32)
                         + Self::hi_bits_flag3(s.as_ref().symbol as u32))
                         as u8;
@@ -783,7 +796,7 @@ impl<RC> PPMd8<RC> {
             {
                 self.restart_model();
             } else {
-                while self.max_context.as_ref().suffix != 0 {
+                while self.max_context.as_ref().suffix.is_not_null() {
                     self.max_context = self.get_context(self.max_context.as_ref().suffix);
                 }
                 loop {
@@ -809,7 +822,7 @@ impl<RC> PPMd8<RC> {
         mut c: NonNull<Context>,
     ) -> Option<NonNull<Context>> {
         unsafe {
-            let mut up_branch = self.found_state.as_ref().get_successor();
+            let up_branch = self.found_state.as_ref().get_successor();
             let mut num_ps = 0u32;
             // Fixed over Shkarin's code. Maybe it could work without + 1 too.
             let mut ps: [Option<NonNull<State>>; PPMD8_MAX_ORDER as usize + 1] =
@@ -821,7 +834,7 @@ impl<RC> PPMd8<RC> {
                 ps[fresh as usize] = Some(self.found_state);
             }
 
-            while c.as_ref().suffix != 0 {
+            while c.as_ref().suffix.is_not_null() {
                 let mut s;
                 c = self.get_context(c.as_ref().suffix);
 
@@ -862,8 +875,9 @@ impl<RC> PPMd8<RC> {
                 }
             }
 
-            let new_sym = *self.ptr_of_offset(up_branch).as_ref();
-            up_branch += 1;
+            let new_sym = *up_branch.as_ptr::<u8, _>(self).as_ref();
+            let new_offset = up_branch.get_offset() + 1;
+            let up_branch = TaggedOffset::from_bytes_offset(new_offset);
 
             let flags = (Self::hi_bits_flag4(self.found_state.as_ref().symbol as u32)
                 + Self::hi_bits_flag3(new_sym as u32)) as u8;
@@ -888,29 +902,29 @@ impl<RC> PPMd8<RC> {
                 let mut c1: NonNull<Context> = if self.hi_unit != self.lo_unit {
                     self.hi_unit = self.hi_unit.offset(-UNIT_SIZE);
                     self.hi_unit.cast()
-                } else if self.free_list[0] != 0 {
+                } else if self.free_list[0].is_not_null() {
                     self.remove_node(0).cast()
                 } else {
                     self.alloc_units_rare(0)?.cast()
                 };
 
                 {
-                    let c1 = c1.as_mut();
-                    c1.flags = flags;
-                    c1.num_stats = 0;
-                    c1.union2.state2.symbol = new_sym;
-                    c1.union2.state2.freq = new_freq;
+                    let c1_mut = c1.as_mut();
+                    c1_mut.flags = flags;
+                    c1_mut.num_stats = 0;
+                    c1_mut.union2.state2.symbol = new_sym;
+                    c1_mut.union2.state2.freq = new_freq;
                 }
 
-                {
-                    self.get_single_state(c1).as_mut().set_successor(up_branch);
-                }
+                self.get_single_state(c1).as_mut().set_successor(up_branch);
 
-                c1.as_mut().suffix = self.offset_for_ptr(c.cast());
+                c1.as_mut().suffix = self.offset_for_ptr(c);
                 num_ps = num_ps.wrapping_sub(1);
 
                 let mut state = ps[num_ps as usize].expect("successor not set");
-                state.as_mut().set_successor(self.offset_for_ptr(c1.cast()));
+                state
+                    .as_mut()
+                    .set_successor(self.offset_for_ptr(c1.cast::<Context>()));
 
                 c = c1;
                 if num_ps == 0 {
@@ -930,7 +944,7 @@ impl<RC> PPMd8<RC> {
         unsafe {
             let mut s;
             let c1 = c;
-            let up_branch = self.offset_for_ptr(self.text.cast());
+            let up_branch = self.offset_for_ptr::<u8>(self.text.cast());
 
             self.found_state.as_mut().set_successor(up_branch);
             self.order_fall += 1;
@@ -941,7 +955,7 @@ impl<RC> PPMd8<RC> {
                     s = state;
                     s1 = None;
                 } else {
-                    if c.as_ref().suffix == 0 {
+                    if c.as_ref().suffix.is_null() {
                         return Some(c);
                     }
                     c = self.get_context(c.as_ref().suffix);
@@ -969,23 +983,22 @@ impl<RC> PPMd8<RC> {
                             (s.as_ref().freq as i32 + ((s.as_ref().freq as i32) < 32) as i32) as u8;
                     }
                 }
-                if s.as_ref().get_successor() != 0 {
+                if s.as_ref().get_successor().is_not_null() {
                     break;
                 }
                 s.as_mut().set_successor(up_branch);
                 self.order_fall += 1;
             }
 
-            if s.as_ref().get_successor() <= up_branch {
+            if s.as_ref().get_successor().get_offset() <= up_branch.get_offset() {
                 let s2 = self.found_state;
                 self.found_state = s;
                 match self.create_successors(0, &mut None, c) {
                     None => {
-                        s.as_mut().set_successor(0);
+                        s.as_mut().set_successor(TaggedOffset::null());
                     }
                     Some(successor) => {
-                        s.as_mut()
-                            .set_successor(self.offset_for_ptr(successor.cast()));
+                        s.as_mut().set_successor(self.offset_for_ptr(successor));
                     }
                 }
                 self.found_state = s2;
@@ -996,7 +1009,7 @@ impl<RC> PPMd8<RC> {
                 self.found_state.as_mut().set_successor(successor);
                 self.text = self.text.offset(-1);
             }
-            if successor == 0 {
+            if successor.is_null() {
                 return None;
             }
 
@@ -1015,7 +1028,7 @@ impl<RC> PPMd8<RC> {
             let mut s: Option<NonNull<State>> = None;
 
             if (self.found_state.as_ref().freq) < MAX_FREQ / 4
-                && self.min_context.as_ref().suffix != 0
+                && self.min_context.as_ref().suffix.is_not_null()
             {
                 // Update frequencies in suffix Context
                 c = self.get_context(self.min_context.as_ref().suffix);
@@ -1052,16 +1065,18 @@ impl<RC> PPMd8<RC> {
             }
 
             c = self.max_context;
-            if self.order_fall == 0 && min_successor != 0 {
+            if self.order_fall == 0 && min_successor.is_not_null() {
                 let Some(cs) = self.create_successors(1, &mut s, self.min_context) else {
-                    self.found_state.as_mut().set_successor(0);
+                    self.found_state
+                        .as_mut()
+                        .set_successor(TaggedOffset::null());
                     self.restore_model(c);
                     return;
                 };
 
                 self.found_state
                     .as_mut()
-                    .set_successor(self.offset_for_ptr(cs.cast()));
+                    .set_successor(self.offset_for_ptr(cs));
                 self.max_context = cs;
                 self.min_context = self.max_context;
                 return;
@@ -1076,20 +1091,20 @@ impl<RC> PPMd8<RC> {
                 self.restore_model(c);
                 return;
             }
-            max_successor = self.offset_for_ptr(text);
+            max_successor = self.offset_for_ptr::<u8>(text.cast());
 
-            if min_successor == 0 {
+            if min_successor.is_null() {
                 let Some(cs) = self.reduce_order(s, self.min_context) else {
                     self.restore_model(c);
                     return;
                 };
-                min_successor = self.offset_for_ptr(cs.cast());
-            } else if self.ptr_of_offset(min_successor) < self.units_start {
+                min_successor = self.offset_for_ptr(cs);
+            } else if !min_successor.is_real_context(self) {
                 let Some(cs) = self.create_successors(0, &mut s, self.min_context) else {
                     self.restore_model(c);
                     return;
                 };
-                min_successor = self.offset_for_ptr(cs.cast());
+                min_successor = self.offset_for_ptr(cs);
             }
 
             self.order_fall -= 1;
@@ -1124,7 +1139,7 @@ impl<RC> PPMd8<RC> {
                                 old_nu as usize * UNIT_SIZE as usize,
                             );
                             self.insert_node(old_ptr.cast(), i);
-                            c.as_mut().union4.stats = self.offset_for_ptr(ptr);
+                            c.as_mut().union4.stats = self.offset_for_ptr(ptr.cast::<State>());
                         }
                     }
                     sum = c.as_ref().union2.summ_freq as u32;
@@ -1132,17 +1147,17 @@ impl<RC> PPMd8<RC> {
                     // An average increase is 1/3 per symbol
                     sum = sum.wrapping_add(((3 * ns1 + 1) < ns) as u32);
                 } else {
-                    let Some(s) = self.alloc_units(0) else {
+                    let Some(s_ptr) = self.alloc_units(0) else {
                         self.restore_model(c);
                         return;
                     };
-                    let mut s = s.cast::<State>();
+                    let mut s = s_ptr.cast::<State>();
 
                     let mut freq = c.as_ref().union2.state2.freq as u32;
                     s.as_mut().symbol = c.as_ref().union2.state2.symbol;
                     s.as_mut()
                         .set_successor(c.as_ref().union4.state4.get_successor());
-                    c.as_mut().union4.stats = self.offset_for_ptr(s.cast());
+                    c.as_mut().union4.stats = self.offset_for_ptr(s);
 
                     if freq < (MAX_FREQ as i32 / 4 - 1) as u32 {
                         freq <<= 1;
@@ -1273,14 +1288,14 @@ impl<RC> PPMd8<RC> {
             let n1 = (num_stats_new + 2) >> 1;
             if n0 != n1 {
                 let shrunk = self.shrink_units(stats.cast(), n0, n1);
-                mc.as_mut().union4.stats = self.offset_for_ptr(shrunk.cast());
+                mc.as_mut().union4.stats = self.offset_for_ptr(shrunk.cast::<State>());
             }
         }
 
         let mc = self.min_context.as_mut();
         mc.union2.summ_freq = sum_freq.wrapping_add(esc_freq).wrapping_sub(esc_freq >> 1) as u16;
         mc.flags |= FLAG_RESCALED;
-        self.found_state = self.ptr_of_offset(mc.union4.stats).cast();
+        self.found_state = mc.union4.stats.as_ptr(self);
     }
 
     unsafe fn make_esc_freq(&mut self, num_masked: u32, esc_freq: &mut u32) -> SeeSource {
@@ -1341,9 +1356,10 @@ impl<RC> PPMd8<RC> {
 
     unsafe fn next_context(&mut self) {
         unsafe {
-            let c = self.get_context(self.found_state.as_ref().get_successor());
-            if self.order_fall == 0 && c.cast() >= self.units_start {
-                self.min_context = c;
+            let successor = self.found_state.as_ref().get_successor();
+            if self.order_fall == 0 && successor.is_real_context(self) {
+                let context = self.get_context(successor);
+                self.min_context = context;
                 self.max_context = self.min_context;
             } else {
                 self.update_model();
@@ -1474,8 +1490,8 @@ impl<RC> PPMd8<RC> {
     }
 
     #[inline(always)]
-    unsafe fn get_context(&mut self, suffix: u32) -> NonNull<Context> {
-        unsafe { self.ptr_of_offset(suffix).cast() }
+    unsafe fn get_context(&mut self, suffix: TaggedOffset) -> NonNull<Context> {
+        unsafe { suffix.as_ptr(self) }
     }
 
     #[inline(always)]
@@ -1483,26 +1499,26 @@ impl<RC> PPMd8<RC> {
         let context_ptr = context.as_ptr();
         unsafe {
             // Safety: We know that context is not null, so a field address from it can't be null.
-            let single_state = addr_of_mut!((*context_ptr).union2);
+            let single_state = &raw mut (*context_ptr).union2;
             NonNull::new_unchecked(single_state).cast()
         }
     }
 
     #[inline(always)]
     unsafe fn get_multi_state_stats(&mut self, mut context: NonNull<Context>) -> NonNull<State> {
-        unsafe { self.ptr_of_offset(context.as_mut().union4.stats).cast() }
+        unsafe { context.as_mut().union4.stats.as_ptr(self) }
     }
 }
 
 impl<R: Read> PPMd8<RangeDecoder<R>> {
     pub(crate) fn new_decoder(
         reader: R,
-        mem_size: u32,
         max_order: u32,
+        mem_size: u32,
         restore_method: RestoreMethod,
     ) -> Result<Self, Error> {
         let range_decoder = RangeDecoder::new(reader)?;
-        Self::construct(range_decoder, mem_size, max_order, restore_method)
+        Self::construct(range_decoder, max_order, mem_size, restore_method)
     }
 
     pub(crate) fn into_inner(self) -> R {
@@ -1526,12 +1542,12 @@ impl<R: Read> PPMd8<RangeDecoder<R>> {
 impl<W: Write> PPMd8<RangeEncoder<W>> {
     pub(crate) fn new_encoder(
         writer: W,
-        mem_size: u32,
         max_order: u32,
+        mem_size: u32,
         restore_method: RestoreMethod,
     ) -> Result<Self, Error> {
         let range_encoder = RangeEncoder::new(writer);
-        Self::construct(range_encoder, mem_size, max_order, restore_method)
+        Self::construct(range_encoder, max_order, mem_size, restore_method)
     }
 
     pub(crate) fn into_inner(self) -> W {

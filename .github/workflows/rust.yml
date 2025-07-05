@@ -36,10 +36,14 @@ jobs:
           toolchain: ${{matrix.toolchain}}
           target: ${{matrix.target}}
       - uses: actions/checkout@v4
-      - name: Build
-        run: cargo build --workspace --release
-      - name: Run tests
-        run: cargo test --workspace --release --all-features
+      - name: Build (default)
+        run: cargo build --workspace
+      - name: Run tests (default)
+        run: cargo test --workspace
+      - name: Build (unstable-tagged-offsets)
+        run: cargo build --workspace --features unstable-tagged-offsets
+      - name: Run tests (unstable-tagged-offsets)
+        run: cargo test --workspace --features unstable-tagged-offsets
 
   build-wasm:
     runs-on: ${{matrix.os}}
@@ -61,8 +65,10 @@ jobs:
           toolchain: ${{matrix.toolchain}}
           target: ${{matrix.target}}
       - uses: actions/checkout@v4
-      - name: Build Default
-        run: cargo build --target wasm32-unknown-unknown --release
+      - name: Build (default)
+        run: cargo build --target wasm32-unknown-unknown
+      - name: Build (unstable-tagged-offsets)
+        run: cargo build --target wasm32-unknown-unknown --features unstable-tagged-offsets
 
   rustfmt:
     name: Rustfmt

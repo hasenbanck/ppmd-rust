@@ -6,7 +6,7 @@ use std::{
     alloc::{alloc_zeroed, dealloc, Layout},
     io::{Read, Write},
     mem::ManuallyDrop,
-    ptr::{addr_of_mut, NonNull},
+    ptr::NonNull,
 };
 
 pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
@@ -30,15 +30,23 @@ static K_INIT_BIN_ESC: [u16; 8] = [
 struct Node {
     stamp: u16,
     nu: u16,
-    next: u32,
-    prev: u32,
+    next: TaggedOffset,
+    prev: TaggedOffset,
+}
+
+impl Pointee for Node {
+    const TAG: u32 = TAG_NODE;
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 union NodeUnion {
     node: Node,
-    next_ref: u32,
+    next_ref: TaggedOffset,
+}
+
+impl Pointee for NodeUnion {
+    const TAG: u32 = TAG_NODE;
 }
 
 #[derive(Copy, Clone)]
@@ -47,7 +55,11 @@ struct Context {
     num_stats: u16,
     union2: Union2,
     union4: Union4,
-    suffix: u32,
+    suffix: TaggedOffset,
+}
+
+impl Pointee for Context {
+    const TAG: u32 = TAG_CONTEXT;
 }
 
 pub(crate) struct PPMd7<RC> {
@@ -70,7 +82,7 @@ pub(crate) struct PPMd7<RC> {
     units_start: NonNull<u8>,
     index2units: [u8; 40],
     units2index: [u8; 128],
-    free_list: [u32; 38],
+    free_list: [TaggedOffset; 38],
     ns2bs_index: [u8; 256],
     ns2index: [u8; 256],
     exp_escape: [u8; 16],
@@ -87,6 +99,22 @@ impl<RC> Drop for PPMd7<RC> {
         unsafe {
             dealloc(self.memory_ptr.as_ptr(), self.memory_layout);
         }
+    }
+}
+
+impl<RC> MemoryAllocator for PPMd7<RC> {
+    fn base_memory_ptr(&self) -> NonNull<u8> {
+        self.memory_ptr
+    }
+
+    #[cfg(not(feature = "unstable-tagged-offsets"))]
+    fn units_start(&self) -> NonNull<u8> {
+        self.units_start
+    }
+
+    #[cfg(feature = "unstable-tagged-offsets")]
+    fn size(&self) -> u32 {
+        self.size
     }
 }
 
@@ -167,7 +195,7 @@ impl<RC> PPMd7<RC> {
             exp_escape: K_EXP_ESCAPE,
             dummy_see: See::default(),
             see: [[See::default(); 16]; 25],
-            free_list: [0; PPMD_NUM_INDEXES as usize],
+            free_list: [TaggedOffset::null(); PPMD_NUM_INDEXES as usize],
             bin_summ: [[0; 64]; 128],
             memory_ptr,
             memory_layout,
@@ -179,29 +207,21 @@ impl<RC> PPMd7<RC> {
         Ok(ppmd)
     }
 
-    unsafe fn ptr_of_offset(&self, offset: u32) -> NonNull<u8> {
-        unsafe { self.memory_ptr.offset(offset as isize) }
+    unsafe fn offset_for_ptr<T: Pointee>(&self, ptr: NonNull<T>) -> TaggedOffset {
+        unsafe { TaggedOffset::from_ptr(self, ptr) }
     }
 
-    unsafe fn offset_for_ptr(&self, ptr: NonNull<u8>) -> u32 {
-        unsafe {
-            let offset = ptr.offset_from(self.memory_ptr);
-            u32::try_from(offset).expect("Failed to convert ptr to offset")
-        }
-    }
-
-    unsafe fn insert_node(&mut self, node: NonNull<u8>, indx: u32) {
-        *node.cast::<u32>().as_mut() = self.free_list[indx as usize];
-        self.free_list[indx as usize] = node.offset_from(self.memory_ptr) as u32;
+    unsafe fn insert_node(&mut self, node: NonNull<Node>, indx: u32) {
+        let mut node_union_ptr = node.cast::<NodeUnion>();
+        node_union_ptr.as_mut().next_ref = self.free_list[indx as usize];
+        self.free_list[indx as usize] = self.offset_for_ptr(node);
     }
 
     unsafe fn remove_node(&mut self, indx: u32) -> NonNull<u8> {
-        let node = self
-            .memory_ptr
-            .offset(self.free_list[indx as usize] as isize)
-            .cast::<u32>();
-        self.free_list[indx as usize] = *node.as_ref();
-        node.cast()
+        let offset = self.free_list[indx as usize];
+        let node_ptr = offset.as_ptr::<Node, _>(self);
+        self.free_list[indx as usize] = node_ptr.cast::<NodeUnion>().as_ref().next_ref;
+        node_ptr.cast()
     }
 
     unsafe fn split_block(&mut self, mut ptr: NonNull<u8>, old_index: u32, new_index: u32) {
@@ -214,10 +234,10 @@ impl<RC> PPMd7<RC> {
             if self.index2units[i as usize] as u32 != nu {
                 i -= 1;
                 let k = self.index2units[i as usize] as u32;
-                self.insert_node(ptr.offset(k as isize * UNIT_SIZE), nu - k - 1);
+                self.insert_node(ptr.offset(k as isize * UNIT_SIZE).cast(), nu - k - 1);
             }
 
-            self.insert_node(ptr, i);
+            self.insert_node(ptr.cast(), i);
         }
     }
 
@@ -230,7 +250,7 @@ impl<RC> PPMd7<RC> {
     /// record.
     unsafe fn glue_free_blocks(&mut self) {
         unsafe {
-            let mut n = 0;
+            let mut n = TaggedOffset::null();
             self.glue_count = 255;
 
             // We set guard node at lo_unit.
@@ -243,14 +263,10 @@ impl<RC> PPMd7<RC> {
             while i < PPMD_NUM_INDEXES {
                 let nu = self.index2units[i as usize] as u16;
                 let mut next = self.free_list[i as usize];
-                self.free_list[i as usize] = 0;
-                while next != 0 {
-                    // Don't change the order of the following commands:
-                    let un = self
-                        .ptr_of_offset(next)
-                        .cast::<Node>()
-                        .cast::<NodeUnion>()
-                        .as_mut();
+                self.free_list[i as usize] = TaggedOffset::null();
+                while next.is_not_null() {
+                    let node_ptr = next.as_ptr::<Node, _>(self);
+                    let un = node_ptr.cast::<NodeUnion>().as_mut();
                     let tmp = next;
                     next = un.next_ref;
                     un.node.stamp = EMPTY_NODE;
@@ -270,25 +286,25 @@ impl<RC> PPMd7<RC> {
     }
 
     ///  Glue free blocks.
-    unsafe fn glue_blocks(&mut self, mut n: u32, head: &mut u32) {
+    unsafe fn glue_blocks(&mut self, mut n: TaggedOffset, head: *mut TaggedOffset) {
         unsafe {
             let mut prev = head;
-            while n != 0 {
-                let mut node = self.ptr_of_offset(n).cast::<Node>();
+            while n.is_not_null() {
+                let mut node = n.as_ptr::<Node, _>(self);
                 let mut nu = node.as_ref().nu as u32;
                 n = node.as_ref().next;
                 if nu == 0 {
                     *prev = n;
                 } else {
-                    prev = &mut node.as_mut().next;
+                    prev = &raw mut node.as_mut().next;
                     loop {
-                        let mut node2 = node.offset(nu as isize);
-                        nu += node2.as_ref().nu as u32;
-                        if node2.as_ref().stamp != EMPTY_NODE || nu >= 0x10000 {
+                        let node2 = node.offset(nu as isize).as_mut();
+                        nu += node2.nu as u32;
+                        if node2.stamp != EMPTY_NODE || nu >= 0x10000 {
                             break;
                         }
-                        node.as_mut().nu = nu as u16;
-                        node2.as_mut().nu = 0;
+                        (*node.as_ptr()).nu = nu as u16;
+                        node2.nu = 0;
                     }
                 }
             }
@@ -296,11 +312,11 @@ impl<RC> PPMd7<RC> {
     }
 
     /// Fill lists of free blocks.
-    unsafe fn fill_list(&mut self, head: u32) {
+    unsafe fn fill_list(&mut self, head: TaggedOffset) {
         unsafe {
             let mut n = head;
-            while n != 0 {
-                let mut node = self.ptr_of_offset(n).cast::<Node>();
+            while n.is_not_null() {
+                let mut node = n.as_ptr::<Node, _>(self);
                 let mut nu = node.as_ref().nu as u32;
 
                 n = node.as_ref().next;
@@ -308,7 +324,7 @@ impl<RC> PPMd7<RC> {
                     continue;
                 }
                 while nu > 128 {
-                    self.insert_node(node.cast(), PPMD_NUM_INDEXES - 1);
+                    self.insert_node(node, PPMD_NUM_INDEXES - 1);
                     nu -= 128;
                     node = node.offset(128);
                 }
@@ -319,7 +335,7 @@ impl<RC> PPMd7<RC> {
                     let k = self.index2units[index as usize] as u32;
                     self.insert_node(node.offset(k as isize).cast(), nu - k - 1);
                 }
-                self.insert_node(node.cast(), index);
+                self.insert_node(node, index);
             }
         }
     }
@@ -329,7 +345,7 @@ impl<RC> PPMd7<RC> {
         unsafe {
             if self.glue_count == 0 {
                 self.glue_free_blocks();
-                if self.free_list[index as usize] != 0 {
+                if self.free_list[index as usize].is_not_null() {
                     return Some(self.remove_node(index));
                 }
             }
@@ -349,7 +365,7 @@ impl<RC> PPMd7<RC> {
                         None
                     };
                 }
-                if self.free_list[i as usize] != 0 {
+                if self.free_list[i as usize].is_not_null() {
                     break;
                 }
             }
@@ -362,7 +378,7 @@ impl<RC> PPMd7<RC> {
 
     unsafe fn alloc_units(&mut self, index: u32) -> Option<NonNull<u8>> {
         unsafe {
-            if self.free_list[index as usize] != 0 {
+            if self.free_list[index as usize].is_not_null() {
                 return Some(self.remove_node(index));
             }
             let num_bytes = self.index2units[index as usize] as u32 * UNIT_SIZE as u32;
@@ -379,9 +395,9 @@ impl<RC> PPMd7<RC> {
     #[inline(never)]
     unsafe fn restart_model(&mut self) {
         unsafe {
-            self.free_list = [0; 38];
+            self.free_list = [TaggedOffset::null(); 38];
 
-            self.text = self.ptr_of_offset(self.align_offset);
+            self.text = self.memory_ptr.offset(self.align_offset as isize);
             self.hi_unit = self.text.offset(self.size as isize);
             self.units_start = self
                 .hi_unit
@@ -411,15 +427,15 @@ impl<RC> PPMd7<RC> {
                 let mc = mc.as_mut();
                 mc.num_stats = 256;
                 mc.union2.summ_freq = (256 + 1) as u16;
-                mc.union4.stats = self.offset_for_ptr(s.cast());
-                mc.suffix = 0;
+                mc.union4.stats = self.offset_for_ptr(s);
+                mc.suffix = TaggedOffset::null();
             }
 
             (0..256).for_each(|i| {
                 let s = s.offset(i).as_mut();
                 s.symbol = i as u8;
                 s.freq = 1;
-                s.set_successor(0);
+                s.set_successor(TaggedOffset::null());
             });
 
             (0..128).for_each(|i| {
@@ -464,7 +480,7 @@ impl<RC> PPMd7<RC> {
     unsafe fn create_successors(&mut self) -> Option<NonNull<Context>> {
         unsafe {
             let mut c = self.min_context;
-            let mut up_branch = self.found_state.as_ref().get_successor();
+            let up_branch = self.found_state.as_ref().get_successor();
             let mut num_ps = 0;
             let mut ps: [Option<NonNull<State>>; 64] = [None; 64];
 
@@ -474,7 +490,7 @@ impl<RC> PPMd7<RC> {
                 ps[fresh as usize] = Some(self.found_state);
             }
 
-            while c.as_ref().suffix != 0 {
+            while c.as_ref().suffix.is_not_null() {
                 let mut s;
                 c = self.get_context(c.as_ref().suffix);
 
@@ -507,8 +523,9 @@ impl<RC> PPMd7<RC> {
             // All created contexts will have single-symbol with new RAW-successor
             // All new RAW-successors will point to next position in RAW text
             // after `found_state.successor`
-            let new_sym = *self.ptr_of_offset(up_branch).cast::<u8>().as_ref();
-            up_branch += 1;
+            let new_sym = *up_branch.as_ptr::<u8, _>(self).as_ref();
+            let new_offset = up_branch.get_offset() + 1;
+            let up_branch = TaggedOffset::from_bytes_offset(new_offset);
 
             let new_freq = if c.as_ref().num_stats == 1 {
                 self.get_single_state(c).as_ref().freq
@@ -537,7 +554,7 @@ impl<RC> PPMd7<RC> {
                 let mut c1: NonNull<Context> = if self.hi_unit != self.lo_unit {
                     self.hi_unit = self.hi_unit.offset(-UNIT_SIZE);
                     self.hi_unit.cast()
-                } else if self.free_list[0] != 0 {
+                } else if self.free_list[0].is_not_null() {
                     self.remove_node(0).cast()
                 } else {
                     self.alloc_units_rare(0)?.cast()
@@ -552,13 +569,11 @@ impl<RC> PPMd7<RC> {
                     state.set_successor(up_branch);
                 }
 
-                c1.as_mut().suffix = self.offset_for_ptr(c.cast());
+                c1.as_mut().suffix = self.offset_for_ptr(c);
                 num_ps -= 1;
 
                 let mut successor = ps[num_ps as usize].expect("successor not set");
-                successor
-                    .as_mut()
-                    .set_successor(self.offset_for_ptr(c1.cast()));
+                successor.as_mut().set_successor(self.offset_for_ptr(c1));
 
                 c = c1;
                 if num_ps == 0 {
@@ -577,7 +592,7 @@ impl<RC> PPMd7<RC> {
 
             let mc = self.min_context;
 
-            if self.found_state.as_ref().freq < MAX_FREQ / 4 && mc.as_ref().suffix != 0 {
+            if self.found_state.as_ref().freq < MAX_FREQ / 4 && mc.as_ref().suffix.is_not_null() {
                 // Update freqs in suffix context
                 c = self.get_context(mc.as_ref().suffix);
 
@@ -621,7 +636,7 @@ impl<RC> PPMd7<RC> {
 
                 self.found_state
                     .as_mut()
-                    .set_successor(self.offset_for_ptr(self.min_context.cast()));
+                    .set_successor(self.offset_for_ptr(self.min_context));
                 return;
             }
 
@@ -635,57 +650,54 @@ impl<RC> PPMd7<RC> {
                 self.restart_model();
                 return;
             }
-            let mut max_successor = self.offset_for_ptr(text);
+            let mut max_successor = self.offset_for_ptr::<u8>(text);
 
             let mut min_successor = self.found_state.as_ref().get_successor();
 
-            match min_successor {
-                0 => {
-                    // found_state has NULL-successor here.
-                    // And only root 0-order context can contain NULL-successors.
-                    // We change successor in found_state to RAW-successor,
-                    // And next context will be same 0-order root Context.
-                    self.found_state.as_mut().set_successor(max_successor);
-                    min_successor = self.offset_for_ptr(self.min_context.cast());
-                }
-                _ => {
-                    // There is a successor for found_state in min_context.
-                    // So the next context will be one order higher than min_context.
+            if min_successor.is_null() {
+                // found_state has NULL-successor here.
+                // And only root 0-order context can contain NULL-successors.
+                // We change successor in found_state to RAW-successor,
+                // And next context will be same 0-order root Context.
+                self.found_state.as_mut().set_successor(max_successor);
+                min_successor = self.offset_for_ptr(self.min_context);
+            } else {
+                // There is a successor for found_state in min_context.
+                // So the next context will be one order higher than min_context.
 
-                    if min_successor <= max_successor {
-                        // min_successor is RAW-successor. So we will create real contexts records:
-                        match self.create_successors() {
-                            None => {
-                                self.restart_model();
-                                return;
-                            }
-                            Some(context) => {
-                                min_successor = self.offset_for_ptr(context.cast());
-                            }
+                if min_successor.get_offset() <= max_successor.get_offset() {
+                    // min_successor is RAW-successor. So we will create real contexts records:
+                    match self.create_successors() {
+                        None => {
+                            self.restart_model();
+                            return;
+                        }
+                        Some(context) => {
+                            min_successor = self.offset_for_ptr(context);
                         }
                     }
+                }
 
-                    // min_successor now is real Context pointer that points to existing (Order+1) context.
+                // min_successor now is real Context pointer that points to existing (Order+1) context.
 
-                    self.order_fall -= 1;
-                    if self.order_fall == 0 {
-                        // If we move to max_order context, then min_successor will be common Successor for both:
-                        //   min_context that is (max_order - 1)
-                        //   max_context that is (max_order)
-                        // so we don't need new RAW-successor, and we can use real min_successor
-                        // as successors for both min_context and max_context.
-                        max_successor = min_successor;
+                self.order_fall -= 1;
+                if self.order_fall == 0 {
+                    // If we move to max_order context, then min_successor will be common Successor for both:
+                    //   min_context that is (max_order - 1)
+                    //   max_context that is (max_order)
+                    // so we don't need new RAW-successor, and we can use real min_successor
+                    // as successors for both min_context and max_context.
+                    max_successor = min_successor;
 
-                        // if (max_context != min_context)
-                        // {
-                        //   There was order fall from max_order, and we don't need current symbol
-                        //   to transfer some RAW-successors to real contexts.
-                        //   So we roll back pointer in raw data for one position.
-                        // }
-                        self.text = self
-                            .text
-                            .offset(-((self.max_context != self.min_context) as isize));
-                    }
+                    // if (max_context != min_context)
+                    // {
+                    //   There was order fall from max_order, and we don't need current symbol
+                    //   to transfer some RAW-successors to real contexts.
+                    //   So we roll back pointer in raw data for one position.
+                    // }
+                    self.text = self
+                        .text
+                        .offset(-((self.max_context != self.min_context) as isize));
                 }
             }
 
@@ -726,7 +738,7 @@ impl<RC> PPMd7<RC> {
                                 old_nu as usize * UNIT_SIZE as usize,
                             );
                             self.insert_node(old_ptr, i);
-                            c.as_mut().union4.stats = self.offset_for_ptr(ptr);
+                            c.as_mut().union4.stats = self.offset_for_ptr(ptr.cast::<State>());
                         }
                     }
                     sum = c.as_mut().union2.summ_freq as u32;
@@ -736,17 +748,17 @@ impl<RC> PPMd7<RC> {
                         + 2 * ((4 * (ns1) <= ns) as u32 & (sum <= (8 * (ns1))) as u32);
                 } else {
                     // Instead of 1-symbol context we create 2-symbol context.
-                    let Some(s) = self.alloc_units(0) else {
+                    let Some(s_ptr) = self.alloc_units(0) else {
                         self.restart_model();
                         return;
                     };
-                    let mut s = s.cast::<State>();
+                    let mut s = s_ptr.cast::<State>();
 
                     let mut freq = c.as_ref().union2.state2.freq as u32;
                     s.as_mut().symbol = c.as_ref().union2.state2.symbol;
                     s.as_mut()
                         .set_successor(c.as_ref().union4.state4.get_successor());
-                    c.as_mut().union4.stats = self.offset_for_ptr(s.cast());
+                    c.as_mut().union4.stats = self.offset_for_ptr(s);
                     if freq < (MAX_FREQ / 4 - 1) as u32 {
                         freq <<= 1;
                     } else {
@@ -786,11 +798,8 @@ impl<RC> PPMd7<RC> {
     }
 
     unsafe fn swap_states(s: NonNull<State>) {
-        unsafe {
-            let tmp = *s.offset(0).as_ref();
-            *s.offset(0).as_mut() = *s.offset(-1).as_ref();
-            *s.offset(-1).as_mut() = tmp;
-        }
+        let s_ptr = s.as_ptr();
+        std::ptr::swap(s_ptr, s_ptr.offset(-1));
     }
 
     #[inline(never)]
@@ -885,9 +894,10 @@ impl<RC> PPMd7<RC> {
                     let i0 = self.units2index[(n0 as usize) - 1] as u32;
                     let i1 = self.units2index[(n1 as usize) - 1] as u32;
                     if i0 != i1 {
-                        if self.free_list[i1 as usize] != 0 {
+                        if self.free_list[i1 as usize].is_not_null() {
                             let ptr = self.remove_node(i1);
-                            self.min_context.as_mut().union4.stats = self.offset_for_ptr(ptr);
+                            self.min_context.as_mut().union4.stats =
+                                self.offset_for_ptr(ptr.cast::<State>());
                             std::ptr::copy(
                                 stats.cast().as_ptr(),
                                 ptr.as_ptr(),
@@ -969,8 +979,9 @@ impl<RC> PPMd7<RC> {
 
     unsafe fn next_context(&mut self) {
         unsafe {
-            let c = self.get_context(self.found_state.as_ref().get_successor());
-            if self.order_fall == 0 && c.cast() > self.text {
+            let successor = self.found_state.as_ref().get_successor();
+            if self.order_fall == 0 && successor.is_real_context(self) {
+                let c = self.get_context(successor);
                 self.min_context = c;
                 self.max_context = self.min_context;
             } else {
@@ -985,7 +996,7 @@ impl<RC> PPMd7<RC> {
             let freq = s.as_ref().freq as u32 + 4;
             self.min_context.as_mut().union2.summ_freq += 4;
             s.as_mut().freq = freq as u8;
-            if freq > s.offset(-1).as_mut().freq as u32 {
+            if freq > s.offset(-1).as_ref().freq as u32 {
                 Self::swap_states(s);
                 s = s.offset(-1);
                 self.found_state = s;
@@ -1089,8 +1100,8 @@ impl<RC> PPMd7<RC> {
     }
 
     #[inline(always)]
-    unsafe fn get_context(&mut self, suffix: u32) -> NonNull<Context> {
-        unsafe { self.ptr_of_offset(suffix).cast() }
+    unsafe fn get_context(&mut self, suffix: TaggedOffset) -> NonNull<Context> {
+        unsafe { suffix.as_ptr(self) }
     }
 
     #[inline(always)]
@@ -1098,14 +1109,14 @@ impl<RC> PPMd7<RC> {
         let context_ptr = context.as_ptr();
         unsafe {
             // Safety: We know that context is not null, so a field address from it can't be null.
-            let single_state = addr_of_mut!((*context_ptr).union2).cast();
-            NonNull::new_unchecked(single_state)
+            let single_state = &raw mut (*context_ptr).union2;
+            NonNull::new_unchecked(single_state).cast()
         }
     }
 
     #[inline(always)]
     unsafe fn get_multi_state_stats(&mut self, mut context: NonNull<Context>) -> NonNull<State> {
-        unsafe { self.ptr_of_offset(context.as_mut().union4.stats).cast() }
+        unsafe { context.as_mut().union4.stats.as_ptr(self) }
     }
 }
 
