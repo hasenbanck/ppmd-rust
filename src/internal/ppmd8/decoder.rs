@@ -93,7 +93,7 @@ impl<R: Read> PPMd8<RangeDecoder<R>> {
 
                 loop {
                     self.order_fall += 1;
-                    if mc.as_ref().suffix == 0 {
+                    if mc.as_ref().suffix.is_null() {
                         return Ok(SYM_END);
                     }
                     mc = self.get_context(mc.as_ref().suffix);

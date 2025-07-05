@@ -16,7 +16,7 @@
 //!    size (this is what is used in the zip archive format).
 //!
 //! Failing to do so will result in garbage symbols at the end of the actual data.
-
+//!
 //! ## Acknowledgement
 //!
 //! This port is based on the 7zip version of PPMd by Igor Pavlov, which in turn was based on the
@@ -48,8 +48,12 @@ pub const PPMD7_MAX_ORDER: u32 = 64;
 /// The minimal memory that PPMd7 supports.
 pub const PPMD7_MIN_MEM_SIZE: u32 = 2048;
 
-/// The maximal memory that PPMd7 supports.
-pub const PPMD7_MAX_MEM_SIZE: u32 = 4294967259;
+#[cfg(feature = "unstable-tagged-offsets")]
+/// The maximal memory that PPMd7 supports (512 MiB).
+pub const PPMD7_MAX_MEM_SIZE: u32 = 1 << 29;
+#[cfg(not(feature = "unstable-tagged-offsets"))]
+/// The maximal memory that PPMd7 supports (~4 GiB).
+pub const PPMD7_MAX_MEM_SIZE: u32 = u32::MAX - 36;
 
 /// The minimal order PPMd8 supports.
 pub const PPMD8_MIN_ORDER: u32 = 2;
@@ -60,7 +64,11 @@ pub const PPMD8_MAX_ORDER: u32 = 16;
 /// The minimal memory that PPMd8 supports.
 pub const PPMD8_MIN_MEM_SIZE: u32 = 2048;
 
-/// The maximal memory that PPMd8 supports.
+#[cfg(feature = "unstable-tagged-offsets")]
+/// The maximal memory that PPMd8 supports (512 MiB).
+pub const PPMD8_MAX_MEM_SIZE: u32 = 1 << 29;
+#[cfg(not(feature = "unstable-tagged-offsets"))]
+/// The maximal memory that PPMd8 supports (4 GiB).
 pub const PPMD8_MAX_MEM_SIZE: u32 = u32::MAX;
 
 const SYM_END: i32 = -1;

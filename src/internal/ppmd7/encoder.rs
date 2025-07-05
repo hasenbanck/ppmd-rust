@@ -76,7 +76,7 @@ impl<W: Write> PPMd7<RangeEncoder<W>> {
 
                 loop {
                     self.order_fall += 1;
-                    if mc.as_ref().suffix == 0 {
+                    if mc.as_ref().suffix.is_null() {
                         return Ok(());
                     }
                     mc = self.get_context(mc.as_ref().suffix);

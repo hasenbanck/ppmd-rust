@@ -81,7 +81,7 @@ impl<W: Write> PPMd8<RangeEncoder<W>> {
 
             loop {
                 self.order_fall += 1;
-                if mc.as_ref().suffix == 0 {
+                if mc.as_ref().suffix.is_null() {
                     // EndMarker (symbol = -1)
                     return Ok(());
                 }
