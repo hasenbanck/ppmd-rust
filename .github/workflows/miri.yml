@@ -10,7 +10,7 @@ jobs:
   ppmd7withoutMarker:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install rust version
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -22,7 +22,7 @@ jobs:
   ppmd7withMarker:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install rust version
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -34,7 +34,7 @@ jobs:
   ppmd8withoutMarker:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install rust version
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -46,7 +46,7 @@ jobs:
   ppmd8withMarker:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install rust version
         uses: dtolnay/rust-toolchain@stable
         with:

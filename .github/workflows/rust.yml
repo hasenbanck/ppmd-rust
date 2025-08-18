@@ -29,13 +29,13 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install rust version
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{matrix.toolchain}}
           target: ${{matrix.target}}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build (default)
         run: cargo build --workspace
       - name: Run tests (default)
@@ -58,13 +58,13 @@ jobs:
           - os: ubuntu-latest
             target: wasm32-unknown-unknown
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install rust version
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{matrix.toolchain}}
           target: ${{matrix.target}}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build (default)
         run: cargo build --target wasm32-unknown-unknown
       - name: Build (unstable-tagged-offsets)
@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@v1
         with:
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@v1
         with:
