@@ -40,6 +40,19 @@ impl<R: Read> Ppmd8Decoder<R> {
         })
     }
 
+    /// Gets a reference to the underlying reader.
+    pub fn get_ref(&self) -> &R {
+        self.ppmd.get_ref()
+    }
+
+    /// Gets a mutable reference to the underlying reader.
+    ///
+    /// Note that mutation of the stream may result in surprising results if
+    /// this decoder is continued to be used.
+    pub fn get_mut(&mut self) -> &mut R {
+        self.ppmd.get_mut()
+    }
+
     /// Returns the inner reader.
     pub fn into_inner(self) -> R {
         self.ppmd.into_inner()
