@@ -30,6 +30,19 @@ impl<W: Write> Ppmd7Encoder<W> {
         Ok(Self { ppmd })
     }
 
+    /// Gets a reference to the underlying writer.
+    pub fn get_ref(&self) -> &W {
+        self.ppmd.get_ref()
+    }
+
+    /// Gets a mutable reference to the underlying writer.
+    ///
+    /// Note that mutating the output/input state of the stream may corrupt
+    /// this object, so care must be taken when using this method.
+    pub fn get_mut(&mut self) -> &mut W {
+        self.ppmd.get_mut()
+    }
+
     /// Returns the inner writer.
     pub fn into_inner(self) -> W {
         self.ppmd.into_inner()

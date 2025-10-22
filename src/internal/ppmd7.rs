@@ -1130,6 +1130,19 @@ impl<R: Read> PPMd7<RangeDecoder<R>> {
         Self::construct(range_decoder, order, mem_size)
     }
 
+    /// Gets a reference to the underlying reader.
+    pub(crate) fn get_ref(&self) -> &R {
+        &self.rc.reader
+    }
+
+    /// Gets a mutable reference to the underlying reader.
+    ///
+    /// Note that mutation of the stream may result in surprising results if
+    /// this decoder is continued to be used.
+    pub(crate) fn get_mut(&mut self) -> &mut R {
+        &mut self.rc.reader
+    }
+
     pub(crate) fn into_inner(self) -> R {
         let manual_drop_self = ManuallyDrop::new(self);
         unsafe {
@@ -1156,6 +1169,19 @@ impl<W: Write> PPMd7<RangeEncoder<W>> {
     ) -> Result<PPMd7<RangeEncoder<W>>, Error> {
         let range_encoder = RangeEncoder::new(writer);
         Self::construct(range_encoder, order, mem_size)
+    }
+
+    /// Gets a reference to the underlying writer.
+    pub(crate) fn get_ref(&self) -> &W {
+        &self.rc.writer
+    }
+
+    /// Gets a mutable reference to the underlying writer.
+    ///
+    /// Note that mutating the output/input state of the stream may corrupt
+    /// this object, so care must be taken when using this method.
+    pub(crate) fn get_mut(&mut self) -> &mut W {
+        &mut self.rc.writer
     }
 
     pub(crate) fn into_inner(self) -> W {
