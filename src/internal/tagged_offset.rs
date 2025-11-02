@@ -5,11 +5,16 @@ const TAG_MASK: u32 = 0xE0000000;
 #[cfg(feature = "unstable-tagged-offsets")]
 const OFFSET_MASK: u32 = 0x1FFFFFFF;
 const TAG_NULL: u32 = 0;
+#[allow(dead_code)]
 pub(crate) const TAG_BYTES: u32 = 1 << 29;
+#[allow(dead_code)]
 pub(crate) const TAG_NODE: u32 = 2 << 29;
+#[allow(dead_code)]
 pub(crate) const TAG_STATE: u32 = 3 << 29;
+#[allow(dead_code)]
 pub(crate) const TAG_CONTEXT: u32 = 4 << 29;
 
+#[allow(dead_code)]
 pub(crate) trait Pointee {
     const TAG: u32;
 }
