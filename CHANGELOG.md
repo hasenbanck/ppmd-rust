@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.3.0 - 2025-11-01
+
+### Added
+
+- Added "get_ref/get_mut" to all decoder and encoder to geta access to the inner reader / writer. By roblabla (#10)
+
 ## 1.2.1 - 2025-07-05
 
 ### Added
