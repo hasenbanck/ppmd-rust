@@ -26,8 +26,9 @@ Failing to do so will result in garbage symbols at the end of the actual data.
 
 This port is based on the 7zip version of PPMd by Igor Pavlov, which in turn was based on the PPMd var.H (2001) /
 PPMd var.I (2002) code by Dmitry Shkarin. The carryless range coder of PPMd8 was originally written by
-Dmitry Subbotin (1999).
+Dmitry Subbotin (1999). These authors put the original code into the public domain.
 
 ## License
 
-The code in this crate is in the public domain as the original code by their authors.
+Licensed under [CC-0](https://spdx.org/licenses/CC0-1.0) or [MIT-0](https://spdx.org/licenses/MIT-0),
+at your option.

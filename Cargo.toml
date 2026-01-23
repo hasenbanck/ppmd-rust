@@ -5,9 +5,9 @@ homepage = "https://github.com/hasenbanck/ppmd-rust"
 repository = "https://github.com/hasenbanck/ppmd-rust"
 edition = "2021"
 rust-version = "1.82"
-version = "1.3.0"
+version = "1.4.0"
 keywords = ["ppmd"]
-license = "CC0-1.0"
+license = "CC0-1.0 OR MIT-0"
 exclude = ["tests/fixtures"]
 
 [features]
