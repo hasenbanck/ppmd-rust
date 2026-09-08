@@ -5,8 +5,7 @@ use crate::{
     Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
 
-/// A decoder to decompress data using PPMd7 (PPMdH) with the carry-less range coder of the
-/// original PPMd var.H, as `.pmd` files written by Shkarin's `ppmd` tool use (7-Zip's `Ppmd7a`).
+/// A decoder to decompress data using PPMd7 (PPMdH) with the carryless range coder (PPMd7a).
 pub struct Ppmd7aDecoder<R: Read> {
     ppmd: PPMd7<RangeDecoder7a<R>>,
     finished: bool,

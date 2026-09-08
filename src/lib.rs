@@ -3,6 +3,8 @@
 //! The following variants are provided:
 //!
 //! - The PPMd7 (PPMdH) as used by the 7z archive format
+//! - The PPMd7 (PPMdH) with the carryless range coder (PPMd7a) as used by the `.pmd` files of the
+//!   original PPMd program
 //! - The PPMd8 (PPMdI rev.1) as used by the zip archive format
 //!
 //! ## Notice
@@ -17,18 +19,12 @@
 //!
 //! Failing to do so will result in garbage symbols at the end of the actual data.
 //!
-//! ## Range coders for PPMd var.H
-//!
-//! [`Ppmd7Decoder`] and [`Ppmd7Encoder`] use the range coder of 7-Zip's 7z format. Files written
-//! by the original `ppmd` tool (`.pmd`) use the carry-less range coder instead; [`Ppmd7aDecoder`]
-//! and [`Ppmd7aEncoder`] read and write that form with the same model.
-//!
 //! ## Acknowledgement
 //!
 //! This port is based on the 7zip version of PPMd by Igor Pavlov, which in turn was based on the
 //! PPMd var.H (2001) / PPMd var.I (2002) code by Dmitry Shkarin. The carryless range coder of
-//! PPMd8 was originally written by Dmitry Subbotin (1999). These authors put the original code
-//! into the public domain.
+//! PPMd7a and PPMd8 was originally written by Dmitry Subbotin (1999). These authors put the
+//! original code into the public domain.
 //!
 //! ## License
 //!

@@ -5,8 +5,7 @@ use crate::{
     Error, PPMD7_MAX_MEM_SIZE, PPMD7_MAX_ORDER, PPMD7_MIN_MEM_SIZE, PPMD7_MIN_ORDER, SYM_END,
 };
 
-/// An encoder to compress data using PPMd7 (PPMdH) with the carry-less range coder of the
-/// original PPMd var.H, the form `.pmd` files take (7-Zip's `Ppmd7a`).
+/// An encoder to compress data using PPMd7 (PPMdH) with the carryless range coder (PPMd7a).
 pub struct Ppmd7aEncoder<W: Write> {
     ppmd: PPMd7<RangeEncoder7a<W>>,
 }

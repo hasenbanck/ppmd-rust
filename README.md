@@ -8,6 +8,7 @@ PPMd compression / decompression. It's a port of the PPMd C-code from 7-Zip to R
 The following variants are provided:
 
 - The PPMd7 (PPMdH) as used by the 7z archive format
+- The PPMd7 (PPMdH) with the carryless range coder (PPMd7a) as used by the `.pmd` files of the original PPMd program
 - The PPMd8 (PPMdI rev.1) as used by the zip archive format
 
 ## Notice
@@ -25,8 +26,8 @@ Failing to do so will result in garbage symbols at the end of the actual data.
 ## Acknowledgement
 
 This port is based on the 7zip version of PPMd by Igor Pavlov, which in turn was based on the PPMd var.H (2001) /
-PPMd var.I (2002) code by Dmitry Shkarin. The carryless range coder of PPMd8 was originally written by
-Dmitry Subbotin (1999). These authors put the original code into the public domain.
+PPMd var.I (2002) code by Dmitry Shkarin. The carryless range coder of PPMd7a and PPMd8 was originally written
+by Dmitry Subbotin (1999). These authors put the original code into the public domain.
 
 ## License
 

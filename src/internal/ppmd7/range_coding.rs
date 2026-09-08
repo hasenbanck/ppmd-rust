@@ -3,9 +3,7 @@ use std::io::{Read, Write};
 use super::{super::PPMD_BIN_SCALE, K_BOT_VALUE, K_TOP_VALUE};
 use crate::Error;
 
-/// What the PPMd7 model asks of a range decoder: the 7z coder and the
-/// carry-less coder of the original PPMd var.H (`Ppmd7a` in 7-Zip) both
-/// serve it.
+/// Range decoder interface of the PPMd7 model.
 pub(crate) trait Ppmd7RangeDecoder {
     fn range(&self) -> u32;
     fn code(&self) -> u32;
@@ -150,10 +148,7 @@ impl<R: Read> Ppmd7RangeDecoder for RangeDecoder<R> {
     }
 }
 
-/// The carry-less range decoder (Dmitry Subbotin, 1999) that the original
-/// PPMd var.H used, as 7-Zip's `Ppmd7a` does: no leading zero byte, a `low`
-/// that tracks the encoder's, and normalization that also runs when the
-/// range falls under the bottom value.
+/// The carryless range decoder of the original PPMd var.H (Ppmd7a in 7-Zip).
 pub(crate) struct RangeDecoder7a<R: Read> {
     pub(crate) range: u32,
     pub(crate) code: u32,
@@ -351,8 +346,7 @@ impl<W: Write> RangeEncoder<W> {
     }
 }
 
-/// What the PPMd7 model asks of a range encoder; the 7z coder and the
-/// carry-less coder both serve it.
+/// Range encoder interface of the PPMd7 model.
 pub(crate) trait Ppmd7RangeEncoder {
     fn range(&self) -> u32;
     fn div_range(&mut self, total: u32);
@@ -406,8 +400,7 @@ impl<W: Write> Ppmd7RangeEncoder for RangeEncoder<W> {
     }
 }
 
-/// The carry-less range encoder the original PPMd var.H used, the
-/// counterpart of [`RangeDecoder7a`].
+/// The carryless range encoder of the original PPMd var.H (Ppmd7a in 7-Zip).
 pub(crate) struct RangeEncoder7a<W: Write> {
     pub(crate) range: u32,
     pub(crate) low: u32,

@@ -9,9 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `Ppmd7aDecoder` and `Ppmd7aEncoder`, PPMd var.H with the carry-less range coder of the
-  original implementation (7-Zip's `Ppmd7a`). This is the coder used by `.pmd` files written by
-  Dmitry Shkarin's `ppmd` tool. `Ppmd7Decoder` and `Ppmd7Encoder` keep using the 7z range coder.
+- Added `Ppmd7aDecoder` and `Ppmd7aEncoder` for PPMd7 (PPMdH) with the carryless range coder (PPMd7a), as used
+  by the `.pmd` files of the original PPMd program.
 
 ## 1.4.1 - 2026-09-01
 
