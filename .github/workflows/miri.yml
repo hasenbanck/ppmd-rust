@@ -31,6 +31,30 @@ jobs:
       - name: Miri
         run: cargo +nightly miri test --features unstable-tagged-offsets --lib encoder_7::test::ppmd7encoder_with_end_marker
 
+  ppmd7awithoutMarker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install rust version
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+          components: miri, rust-std
+      - name: Miri
+        run: cargo +nightly miri test --features unstable-tagged-offsets --lib encoder_7a::test::ppmd7aencoder_without_end_marker
+
+  ppmd7awithMarker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install rust version
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+          components: miri, rust-std
+      - name: Miri
+        run: cargo +nightly miri test --features unstable-tagged-offsets --lib encoder_7a::test::ppmd7aencoder_with_end_marker
+
   ppmd8withoutMarker:
     runs-on: ubuntu-24.04
     steps:
