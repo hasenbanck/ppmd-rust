@@ -1,7 +1,7 @@
 use super::*;
 use crate::{SYM_END, SYM_ERROR};
 
-impl<R: Read> PPMd7<RangeDecoder<R>> {
+impl<RC: Ppmd7RangeDecoder> PPMd7<RC> {
     pub(crate) fn decode_symbol(&mut self) -> Result<i32, std::io::Error> {
         unsafe {
             let mut char_mask: [u8; 256];
@@ -53,8 +53,8 @@ impl<R: Read> PPMd7<RangeDecoder<R>> {
                 Self::mask_symbols(&mut char_mask, s, s2);
             } else {
                 let s = self.get_single_state(self.min_context);
-                let range = self.rc.range;
-                let code = self.rc.code;
+                let range = self.rc.range();
+                let code = self.rc.code();
                 let prob = self.get_bin_summ();
 
                 let mut pr: u32 = *prob as u32;

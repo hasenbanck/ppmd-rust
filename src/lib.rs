@@ -17,6 +17,12 @@
 //!
 //! Failing to do so will result in garbage symbols at the end of the actual data.
 //!
+//! ## Range coders for PPMd var.H
+//!
+//! [`Ppmd7Decoder`] and [`Ppmd7Encoder`] use the range coder of 7-Zip's 7z format. Files written
+//! by the original `ppmd` tool (`.pmd`) use the carry-less range coder instead; [`Ppmd7aDecoder`]
+//! and [`Ppmd7aEncoder`] read and write that form with the same model.
+//!
 //! ## Acknowledgement
 //!
 //! This port is based on the 7zip version of PPMd by Igor Pavlov, which in turn was based on the
@@ -32,13 +38,17 @@
 mod internal;
 
 mod decoder_7;
+mod decoder_7a;
 mod decoder_8;
 mod encoder_7;
+mod encoder_7a;
 mod encoder_8;
 
 pub use decoder_7::Ppmd7Decoder;
+pub use decoder_7a::Ppmd7aDecoder;
 pub use decoder_8::Ppmd8Decoder;
 pub use encoder_7::Ppmd7Encoder;
+pub use encoder_7a::Ppmd7aEncoder;
 pub use encoder_8::Ppmd8Encoder;
 
 /// The minimal order PPMd7 supports.

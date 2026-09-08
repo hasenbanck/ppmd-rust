@@ -9,7 +9,10 @@ use std::{
     ptr::NonNull,
 };
 
-pub(crate) use range_coding::{RangeDecoder, RangeEncoder};
+pub(crate) use range_coding::{
+    Ppmd7RangeDecoder, Ppmd7RangeEncoder, RangeDecoder, RangeDecoder7a, RangeEncoder,
+    RangeEncoder7a,
+};
 
 use super::*;
 use crate::Error;
@@ -17,6 +20,7 @@ use crate::Error;
 const MAX_FREQ: u8 = 124;
 const UNIT_SIZE: isize = 12;
 const K_TOP_VALUE: u32 = 1 << 24;
+const K_BOT_VALUE: u32 = 1 << 15;
 const EMPTY_NODE: u16 = 0;
 
 static K_EXP_ESCAPE: [u8; 16] = [25, 14, 9, 7, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2];
@@ -1161,6 +1165,47 @@ impl<R: Read> PPMd7<RangeDecoder<R>> {
     }
 }
 
+impl<R: Read> PPMd7<RangeDecoder7a<R>> {
+    pub(crate) fn new_decoder_7a(
+        reader: R,
+        order: u32,
+        mem_size: u32,
+    ) -> Result<PPMd7<RangeDecoder7a<R>>, Error> {
+        let range_decoder = RangeDecoder7a::new(reader)?;
+        Self::construct(range_decoder, order, mem_size)
+    }
+
+    /// Gets a reference to the underlying reader.
+    pub(crate) fn get_ref(&self) -> &R {
+        &self.rc.reader
+    }
+
+    /// Gets a mutable reference to the underlying reader.
+    ///
+    /// Note that mutation of the stream may result in surprising results if
+    /// this decoder is continued to be used.
+    pub(crate) fn get_mut(&mut self) -> &mut R {
+        &mut self.rc.reader
+    }
+
+    pub(crate) fn into_inner(self) -> R {
+        let manual_drop_self = ManuallyDrop::new(self);
+        unsafe {
+            dealloc(
+                manual_drop_self.memory_ptr.as_ptr(),
+                manual_drop_self.memory_layout,
+            );
+        }
+        let rc = unsafe { std::ptr::read(&manual_drop_self.rc) };
+        let RangeDecoder7a { reader, .. } = rc;
+        reader
+    }
+
+    pub(crate) fn range_decoder_code(&self) -> u32 {
+        self.rc.code
+    }
+}
+
 impl<W: Write> PPMd7<RangeEncoder<W>> {
     pub(crate) fn new_encoder(
         writer: W,
@@ -1194,6 +1239,47 @@ impl<W: Write> PPMd7<RangeEncoder<W>> {
         }
         let rc = unsafe { std::ptr::read(&manual_drop_self.rc) };
         let RangeEncoder { writer, .. } = rc;
+        writer
+    }
+
+    pub(crate) fn flush_range_encoder(&mut self) -> Result<(), std::io::Error> {
+        self.rc.flush()
+    }
+}
+
+impl<W: Write> PPMd7<RangeEncoder7a<W>> {
+    pub(crate) fn new_encoder_7a(
+        writer: W,
+        order: u32,
+        mem_size: u32,
+    ) -> Result<PPMd7<RangeEncoder7a<W>>, Error> {
+        let range_encoder = RangeEncoder7a::new(writer);
+        Self::construct(range_encoder, order, mem_size)
+    }
+
+    /// Gets a reference to the underlying writer.
+    pub(crate) fn get_ref(&self) -> &W {
+        &self.rc.writer
+    }
+
+    /// Gets a mutable reference to the underlying writer.
+    ///
+    /// Note that mutating the output/input state of the stream may corrupt
+    /// this object, so care must be taken when using this method.
+    pub(crate) fn get_mut(&mut self) -> &mut W {
+        &mut self.rc.writer
+    }
+
+    pub(crate) fn into_inner(self) -> W {
+        let manual_drop_self = ManuallyDrop::new(self);
+        unsafe {
+            dealloc(
+                manual_drop_self.memory_ptr.as_ptr(),
+                manual_drop_self.memory_layout,
+            );
+        }
+        let rc = unsafe { std::ptr::read(&manual_drop_self.rc) };
+        let RangeEncoder7a { writer, .. } = rc;
         writer
     }
 

@@ -1,6 +1,6 @@
 use super::*;
 
-impl<W: Write> PPMd7<RangeEncoder<W>> {
+impl<RC: Ppmd7RangeEncoder> PPMd7<RC> {
     pub(crate) fn encode_symbol(&mut self, symbol: i32) -> Result<(), std::io::Error> {
         unsafe {
             let mut char_mask: [u8; 256];
@@ -8,7 +8,8 @@ impl<W: Write> PPMd7<RangeEncoder<W>> {
             if self.min_context.as_ref().num_stats != 1 {
                 let mut s = self.get_multi_state_stats(self.min_context);
 
-                self.rc.range /= self.min_context.as_ref().union2.summ_freq as u32;
+                self.rc
+                    .div_range(self.min_context.as_ref().union2.summ_freq as u32);
 
                 if s.as_ref().symbol as i32 == symbol {
                     self.rc.encode_final(0, s.as_ref().freq as u32)?;
@@ -43,7 +44,7 @@ impl<W: Write> PPMd7<RangeEncoder<W>> {
                 Self::mask_symbols(&mut char_mask, s, s2);
             } else {
                 let s = self.get_single_state(self.min_context);
-                let range = self.rc.range;
+                let range = self.rc.range();
                 let prob = self.get_bin_summ();
 
                 let mut pr = *prob as u32;
@@ -122,7 +123,7 @@ impl<W: Write> PPMd7<RangeEncoder<W>> {
                                 num2 -= 1;
                             }
                         }
-                        self.rc.range /= sum;
+                        self.rc.div_range(sum);
                         self.rc.encode_final(low, freq)?;
                         self.update2();
                         return Ok(());
@@ -137,7 +138,7 @@ impl<W: Write> PPMd7<RangeEncoder<W>> {
                     let see = self.get_see(see_source);
                     see.summ = ((see.summ as u32) + total) as u16;
 
-                    self.rc.range /= total;
+                    self.rc.div_range(total);
                     self.rc.encode(sum, esc_freq);
                 }
 

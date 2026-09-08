@@ -1,7 +1,21 @@
 use std::io::{Read, Write};
 
-use super::K_TOP_VALUE;
+use super::{super::PPMD_BIN_SCALE, K_BOT_VALUE, K_TOP_VALUE};
 use crate::Error;
+
+/// What the PPMd7 model asks of a range decoder: the 7z coder and the
+/// carry-less coder of the original PPMd var.H (`Ppmd7a` in 7-Zip) both
+/// serve it.
+pub(crate) trait Ppmd7RangeDecoder {
+    fn range(&self) -> u32;
+    fn code(&self) -> u32;
+    fn get_threshold(&mut self, total: u32) -> u32;
+    fn decode_bit_0(&mut self, size: u32) -> Result<(), std::io::Error>;
+    fn decode_bit_1(&mut self, size: u32);
+    fn decode(&mut self, start: u32, size: u32);
+    fn decode_final(&mut self, start: u32, freq: u32) -> Result<(), std::io::Error>;
+    fn normalize_remote(&mut self) -> Result<(), std::io::Error>;
+}
 
 pub(crate) struct RangeDecoder<R: Read> {
     pub(crate) range: u32,
@@ -91,6 +105,153 @@ impl<R: Read> RangeDecoder<R> {
             self.range <<= 8;
         }
         Ok(())
+    }
+}
+
+impl<R: Read> Ppmd7RangeDecoder for RangeDecoder<R> {
+    #[inline(always)]
+    fn range(&self) -> u32 {
+        self.range
+    }
+
+    #[inline(always)]
+    fn code(&self) -> u32 {
+        self.code
+    }
+
+    #[inline(always)]
+    fn get_threshold(&mut self, total: u32) -> u32 {
+        RangeDecoder::get_threshold(self, total)
+    }
+
+    #[inline(always)]
+    fn decode_bit_0(&mut self, size: u32) -> Result<(), std::io::Error> {
+        RangeDecoder::decode_bit_0(self, size)
+    }
+
+    #[inline(always)]
+    fn decode_bit_1(&mut self, size: u32) {
+        RangeDecoder::decode_bit_1(self, size)
+    }
+
+    #[inline(always)]
+    fn decode(&mut self, start: u32, size: u32) {
+        RangeDecoder::decode(self, start, size)
+    }
+
+    #[inline(always)]
+    fn decode_final(&mut self, start: u32, freq: u32) -> Result<(), std::io::Error> {
+        RangeDecoder::decode_final(self, start, freq)
+    }
+
+    #[inline(always)]
+    fn normalize_remote(&mut self) -> Result<(), std::io::Error> {
+        RangeDecoder::normalize_remote(self)
+    }
+}
+
+/// The carry-less range decoder (Dmitry Subbotin, 1999) that the original
+/// PPMd var.H used, as 7-Zip's `Ppmd7a` does: no leading zero byte, a `low`
+/// that tracks the encoder's, and normalization that also runs when the
+/// range falls under the bottom value.
+pub(crate) struct RangeDecoder7a<R: Read> {
+    pub(crate) range: u32,
+    pub(crate) code: u32,
+    pub(crate) low: u32,
+    pub(crate) reader: R,
+}
+
+impl<R: Read> RangeDecoder7a<R> {
+    pub(crate) fn new(reader: R) -> crate::Result<Self> {
+        let mut decoder = Self {
+            range: 0xFFFFFFFF,
+            code: 0,
+            low: 0,
+            reader,
+        };
+
+        for _ in 0..4 {
+            decoder.code = decoder.code << 8 | decoder.read_byte().map_err(Error::IoError)?;
+        }
+
+        if decoder.code == 0xFFFFFFFF {
+            return Err(Error::RangeDecoderInitialization);
+        }
+
+        Ok(decoder)
+    }
+
+    #[inline(always)]
+    fn read_byte(&mut self) -> Result<u32, std::io::Error> {
+        let mut buffer = [0];
+        self.reader.read_exact(&mut buffer)?;
+        Ok(buffer[0] as u32)
+    }
+
+    #[inline(always)]
+    fn normalize(&mut self) -> Result<(), std::io::Error> {
+        while self.low ^ self.low.wrapping_add(self.range) < K_TOP_VALUE
+            || self.range < K_BOT_VALUE && {
+                self.range = 0u32.wrapping_sub(self.low) & (K_BOT_VALUE - 1);
+                true
+            }
+        {
+            self.code = self.code << 8 | self.read_byte()?;
+            self.range <<= 8;
+            self.low <<= 8;
+        }
+
+        Ok(())
+    }
+}
+
+impl<R: Read> Ppmd7RangeDecoder for RangeDecoder7a<R> {
+    #[inline(always)]
+    fn range(&self) -> u32 {
+        self.range
+    }
+
+    #[inline(always)]
+    fn code(&self) -> u32 {
+        self.code
+    }
+
+    #[inline(always)]
+    fn get_threshold(&mut self, total: u32) -> u32 {
+        self.range /= total;
+        self.code / self.range
+    }
+
+    #[inline(always)]
+    fn decode_bit_0(&mut self, size: u32) -> Result<(), std::io::Error> {
+        self.range = size;
+        self.normalize()
+    }
+
+    #[inline(always)]
+    fn decode_bit_1(&mut self, size: u32) {
+        self.low = self.low.wrapping_add(size);
+        self.code = self.code.wrapping_sub(size);
+        self.range = (self.range & !(PPMD_BIN_SCALE - 1)).wrapping_sub(size);
+    }
+
+    #[inline(always)]
+    fn decode(&mut self, start: u32, size: u32) {
+        let start = start.wrapping_mul(self.range);
+        self.low = self.low.wrapping_add(start);
+        self.code = self.code.wrapping_sub(start);
+        self.range = self.range.wrapping_mul(size);
+    }
+
+    #[inline(always)]
+    fn decode_final(&mut self, start: u32, freq: u32) -> Result<(), std::io::Error> {
+        Ppmd7RangeDecoder::decode(self, start, freq);
+        self.normalize()
+    }
+
+    #[inline(always)]
+    fn normalize_remote(&mut self) -> Result<(), std::io::Error> {
+        self.normalize()
     }
 }
 
@@ -187,5 +348,144 @@ impl<W: Write> RangeEncoder<W> {
         }
         self.writer.flush()?;
         Ok(())
+    }
+}
+
+/// What the PPMd7 model asks of a range encoder; the 7z coder and the
+/// carry-less coder both serve it.
+pub(crate) trait Ppmd7RangeEncoder {
+    fn range(&self) -> u32;
+    fn div_range(&mut self, total: u32);
+    fn encode_bit_0(&mut self, bound: u32) -> Result<(), std::io::Error>;
+    fn encode_bit_1(&mut self, bound: u32) -> Result<(), std::io::Error>;
+    fn encode(&mut self, start: u32, size: u32);
+    fn encode_final(&mut self, start: u32, freq: u32) -> Result<(), std::io::Error>;
+    fn normalize_remote(&mut self) -> Result<(), std::io::Error>;
+    fn flush(&mut self) -> Result<(), std::io::Error>;
+}
+
+impl<W: Write> Ppmd7RangeEncoder for RangeEncoder<W> {
+    #[inline(always)]
+    fn range(&self) -> u32 {
+        self.range
+    }
+
+    #[inline(always)]
+    fn div_range(&mut self, total: u32) {
+        self.range /= total;
+    }
+
+    #[inline(always)]
+    fn encode_bit_0(&mut self, bound: u32) -> Result<(), std::io::Error> {
+        RangeEncoder::encode_bit_0(self, bound)
+    }
+
+    #[inline(always)]
+    fn encode_bit_1(&mut self, bound: u32) -> Result<(), std::io::Error> {
+        RangeEncoder::encode_bit_1(self, bound)
+    }
+
+    #[inline(always)]
+    fn encode(&mut self, start: u32, size: u32) {
+        RangeEncoder::encode(self, start, size)
+    }
+
+    #[inline(always)]
+    fn encode_final(&mut self, start: u32, freq: u32) -> Result<(), std::io::Error> {
+        RangeEncoder::encode_final(self, start, freq)
+    }
+
+    #[inline(always)]
+    fn normalize_remote(&mut self) -> Result<(), std::io::Error> {
+        RangeEncoder::normalize_remote(self)
+    }
+
+    #[inline(always)]
+    fn flush(&mut self) -> Result<(), std::io::Error> {
+        RangeEncoder::flush(self)
+    }
+}
+
+/// The carry-less range encoder the original PPMd var.H used, the
+/// counterpart of [`RangeDecoder7a`].
+pub(crate) struct RangeEncoder7a<W: Write> {
+    pub(crate) range: u32,
+    pub(crate) low: u32,
+    pub(crate) writer: W,
+}
+
+impl<W: Write> RangeEncoder7a<W> {
+    pub(crate) fn new(writer: W) -> Self {
+        Self {
+            range: 0xFFFFFFFF,
+            low: 0,
+            writer,
+        }
+    }
+
+    #[inline(always)]
+    fn normalize(&mut self) -> Result<(), std::io::Error> {
+        while self.low ^ self.low.wrapping_add(self.range) < K_TOP_VALUE
+            || self.range < K_BOT_VALUE && {
+                self.range = 0u32.wrapping_sub(self.low) & (K_BOT_VALUE - 1);
+                true
+            }
+        {
+            self.writer.write_all(&[(self.low >> 24) as u8])?;
+            self.range <<= 8;
+            self.low <<= 8;
+        }
+
+        Ok(())
+    }
+}
+
+impl<W: Write> Ppmd7RangeEncoder for RangeEncoder7a<W> {
+    #[inline(always)]
+    fn range(&self) -> u32 {
+        self.range
+    }
+
+    #[inline(always)]
+    fn div_range(&mut self, total: u32) {
+        self.range /= total;
+    }
+
+    #[inline(always)]
+    fn encode_bit_0(&mut self, bound: u32) -> Result<(), std::io::Error> {
+        self.range = bound;
+        self.normalize()
+    }
+
+    #[inline(always)]
+    fn encode_bit_1(&mut self, bound: u32) -> Result<(), std::io::Error> {
+        self.low = self.low.wrapping_add(bound);
+        self.range = (self.range & !(PPMD_BIN_SCALE - 1)).wrapping_sub(bound);
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn encode(&mut self, start: u32, size: u32) {
+        self.low = self.low.wrapping_add(start.wrapping_mul(self.range));
+        self.range = self.range.wrapping_mul(size);
+    }
+
+    #[inline(always)]
+    fn encode_final(&mut self, start: u32, freq: u32) -> Result<(), std::io::Error> {
+        Ppmd7RangeEncoder::encode(self, start, freq);
+        self.normalize()
+    }
+
+    #[inline(always)]
+    fn normalize_remote(&mut self) -> Result<(), std::io::Error> {
+        self.normalize()
+    }
+
+    fn flush(&mut self) -> Result<(), std::io::Error> {
+        for _ in 0..4 {
+            self.writer.write_all(&[(self.low >> 24) as u8])?;
+            self.low <<= 8;
+        }
+        self.writer.flush()
     }
 }

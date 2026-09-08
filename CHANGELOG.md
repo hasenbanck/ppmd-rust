@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Added `Ppmd7aDecoder` and `Ppmd7aEncoder`, PPMd var.H with the carry-less range coder of the
+  original implementation (7-Zip's `Ppmd7a`). This is the coder used by `.pmd` files written by
+  Dmitry Shkarin's `ppmd` tool. `Ppmd7Decoder` and `Ppmd7Encoder` keep using the 7z range coder.
+
 ## 1.4.1 - 2026-09-01
 
 ### Fixed
