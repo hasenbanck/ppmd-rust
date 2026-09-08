@@ -3,7 +3,10 @@ use std::{
     path::PathBuf,
 };
 
-use ppmd_rust::{Ppmd7Decoder, Ppmd7Encoder, Ppmd8Decoder, Ppmd8Encoder, RestoreMethod};
+use ppmd_rust::{
+    Ppmd7Decoder, Ppmd7Encoder, Ppmd7aDecoder, Ppmd7aEncoder, Ppmd8Decoder, Ppmd8Encoder,
+    RestoreMethod,
+};
 
 trait PPMdVersion {
     fn compression(level: u32) -> (u32, u32);
@@ -51,6 +54,52 @@ impl PPMdVersion for PPMd7 {
         {
             let mut ppmd7 = Ppmd7Decoder::new(compressed, order, memory_size).unwrap();
             ppmd7.read_exact(&mut data).unwrap();
+        }
+        String::from_utf8(data).unwrap()
+    }
+}
+
+struct PPMd7a;
+
+impl PPMdVersion for PPMd7a {
+    fn compression(level: u32) -> (u32, u32) {
+        // Same as PPMd7, but the original PPMd program limits the order to 16.
+        const ORDERS: [u32; 10] = [3, 4, 4, 5, 5, 6, 8, 16, 16, 16];
+        let order = ORDERS[level as usize];
+        let memory_size = 1 << (level + 19);
+        (order, memory_size)
+    }
+
+    fn data_path(bin_directory: &str, file_stem: &str, level: u32) -> PathBuf {
+        PathBuf::from(bin_directory).join(format!("{file_stem}_ppmd7a_level{level}.bin"))
+    }
+
+    fn compress(text: &str, order: u32, memory_size: u32) -> Vec<u8> {
+        let mut compressed = Vec::new();
+        {
+            // The original PPMd program always writes the end marker.
+            let mut ppmd7a = Ppmd7aEncoder::new(&mut compressed, order, memory_size).unwrap();
+            ppmd7a.write_all(text.as_bytes()).unwrap();
+            ppmd7a.finish(true).unwrap();
+        }
+        compressed
+    }
+
+    fn decompress(
+        compressed: &[u8],
+        uncompressed_size: usize,
+        order: u32,
+        memory_size: u32,
+    ) -> String {
+        let mut data = vec![0; uncompressed_size];
+        {
+            let mut ppmd7a = Ppmd7aDecoder::new(compressed, order, memory_size).unwrap();
+            ppmd7a.read_exact(&mut data).unwrap();
+
+            // Only the end marker must follow.
+            let mut rest = Vec::new();
+            ppmd7a.read_to_end(&mut rest).unwrap();
+            assert!(rest.is_empty());
         }
         String::from_utf8(data).unwrap()
     }
@@ -175,6 +224,20 @@ mod tests {
     #[test] fn decompression_ppmd8_pg100_1() { test_decompression::<PPMd8>(PG100_PATH, 1); }
     #[test] fn decompression_ppmd8_pg6800_1() { test_decompression::<PPMd8>(PG6800_PATH, 1); }
 
+    // PPMd7a Compression Tests - Level 1
+    #[test] fn compression_ppmd7a_apache2_1() { test_compression::<PPMd7a>(APACHE2_PATH, 1); }
+    #[test] fn compression_ppmd7a_gpl3_1() { test_compression::<PPMd7a>(GPL3_PATH, 1); }
+    #[test] fn compression_ppmd7a_issue3_1() { test_compression::<PPMd7a>(ISSUE3_PATH, 1); }
+    #[test] fn compression_ppmd7a_pg100_1() { test_compression::<PPMd7a>(PG100_PATH, 1); }
+    #[test] fn compression_ppmd7a_pg6800_1() { test_compression::<PPMd7a>(PG6800_PATH, 1); }
+
+    // PPMd7a Decompression Tests - Level 1
+    #[test] fn decompression_ppmd7a_apache2_1() { test_decompression::<PPMd7a>(APACHE2_PATH, 1); }
+    #[test] fn decompression_ppmd7a_gpl3_1() { test_decompression::<PPMd7a>(GPL3_PATH, 1); }
+    #[test] fn decompression_ppmd7a_issue3_1() { test_decompression::<PPMd7a>(ISSUE3_PATH, 1); }
+    #[test] fn decompression_ppmd7a_pg100_1() { test_decompression::<PPMd7a>(PG100_PATH, 1); }
+    #[test] fn decompression_ppmd7a_pg6800_1() { test_decompression::<PPMd7a>(PG6800_PATH, 1); }
+
     // PPMd7 Compression Tests - Level 2
     #[test] fn compression_ppmd7_apache2_2() { test_compression::<PPMd7>(APACHE2_PATH, 2); }
     #[test] fn compression_ppmd7_gpl3_2() { test_compression::<PPMd7>(GPL3_PATH, 2); }
@@ -202,6 +265,20 @@ mod tests {
     #[test] fn decompression_ppmd8_issue3_2() { test_decompression::<PPMd8>(ISSUE3_PATH, 2); }
     #[test] fn decompression_ppmd8_pg100_2() { test_decompression::<PPMd8>(PG100_PATH, 2); }
     #[test] fn decompression_ppmd8_pg6800_2() { test_decompression::<PPMd8>(PG6800_PATH, 2); }
+
+    // PPMd7a Compression Tests - Level 2
+    #[test] fn compression_ppmd7a_apache2_2() { test_compression::<PPMd7a>(APACHE2_PATH, 2); }
+    #[test] fn compression_ppmd7a_gpl3_2() { test_compression::<PPMd7a>(GPL3_PATH, 2); }
+    #[test] fn compression_ppmd7a_issue3_2() { test_compression::<PPMd7a>(ISSUE3_PATH, 2); }
+    #[test] fn compression_ppmd7a_pg100_2() { test_compression::<PPMd7a>(PG100_PATH, 2); }
+    #[test] fn compression_ppmd7a_pg6800_2() { test_compression::<PPMd7a>(PG6800_PATH, 2); }
+
+    // PPMd7a Decompression Tests - Level 2
+    #[test] fn decompression_ppmd7a_apache2_2() { test_decompression::<PPMd7a>(APACHE2_PATH, 2); }
+    #[test] fn decompression_ppmd7a_gpl3_2() { test_decompression::<PPMd7a>(GPL3_PATH, 2); }
+    #[test] fn decompression_ppmd7a_issue3_2() { test_decompression::<PPMd7a>(ISSUE3_PATH, 2); }
+    #[test] fn decompression_ppmd7a_pg100_2() { test_decompression::<PPMd7a>(PG100_PATH, 2); }
+    #[test] fn decompression_ppmd7a_pg6800_2() { test_decompression::<PPMd7a>(PG6800_PATH, 2); }
 
     // PPMd7 Compression Tests - Level 3
     #[test] fn compression_ppmd7_apache2_3() { test_compression::<PPMd7>(APACHE2_PATH, 3); }
@@ -231,6 +308,20 @@ mod tests {
     #[test] fn decompression_ppmd8_pg100_3() { test_decompression::<PPMd8>(PG100_PATH, 3); }
     #[test] fn decompression_ppmd8_pg6800_3() { test_decompression::<PPMd8>(PG6800_PATH, 3); }
 
+    // PPMd7a Compression Tests - Level 3
+    #[test] fn compression_ppmd7a_apache2_3() { test_compression::<PPMd7a>(APACHE2_PATH, 3); }
+    #[test] fn compression_ppmd7a_gpl3_3() { test_compression::<PPMd7a>(GPL3_PATH, 3); }
+    #[test] fn compression_ppmd7a_issue3_3() { test_compression::<PPMd7a>(ISSUE3_PATH, 3); }
+    #[test] fn compression_ppmd7a_pg100_3() { test_compression::<PPMd7a>(PG100_PATH, 3); }
+    #[test] fn compression_ppmd7a_pg6800_3() { test_compression::<PPMd7a>(PG6800_PATH, 3); }
+
+    // PPMd7a Decompression Tests - Level 3
+    #[test] fn decompression_ppmd7a_apache2_3() { test_decompression::<PPMd7a>(APACHE2_PATH, 3); }
+    #[test] fn decompression_ppmd7a_gpl3_3() { test_decompression::<PPMd7a>(GPL3_PATH, 3); }
+    #[test] fn decompression_ppmd7a_issue3_3() { test_decompression::<PPMd7a>(ISSUE3_PATH, 3); }
+    #[test] fn decompression_ppmd7a_pg100_3() { test_decompression::<PPMd7a>(PG100_PATH, 3); }
+    #[test] fn decompression_ppmd7a_pg6800_3() { test_decompression::<PPMd7a>(PG6800_PATH, 3); }
+
     // PPMd7 Compression Tests - Level 4
     #[test] fn compression_ppmd7_apache2_4() { test_compression::<PPMd7>(APACHE2_PATH, 4); }
     #[test] fn compression_ppmd7_gpl3_4() { test_compression::<PPMd7>(GPL3_PATH, 4); }
@@ -258,6 +349,20 @@ mod tests {
     #[test] fn decompression_ppmd8_issue3_4() { test_decompression::<PPMd8>(ISSUE3_PATH, 4); }
     #[test] fn decompression_ppmd8_pg100_4() { test_decompression::<PPMd8>(PG100_PATH, 4); }
     #[test] fn decompression_ppmd8_pg6800_4() { test_decompression::<PPMd8>(PG6800_PATH, 4); }
+
+    // PPMd7a Compression Tests - Level 4
+    #[test] fn compression_ppmd7a_apache2_4() { test_compression::<PPMd7a>(APACHE2_PATH, 4); }
+    #[test] fn compression_ppmd7a_gpl3_4() { test_compression::<PPMd7a>(GPL3_PATH, 4); }
+    #[test] fn compression_ppmd7a_issue3_4() { test_compression::<PPMd7a>(ISSUE3_PATH, 4); }
+    #[test] fn compression_ppmd7a_pg100_4() { test_compression::<PPMd7a>(PG100_PATH, 4); }
+    #[test] fn compression_ppmd7a_pg6800_4() { test_compression::<PPMd7a>(PG6800_PATH, 4); }
+
+    // PPMd7a Decompression Tests - Level 4
+    #[test] fn decompression_ppmd7a_apache2_4() { test_decompression::<PPMd7a>(APACHE2_PATH, 4); }
+    #[test] fn decompression_ppmd7a_gpl3_4() { test_decompression::<PPMd7a>(GPL3_PATH, 4); }
+    #[test] fn decompression_ppmd7a_issue3_4() { test_decompression::<PPMd7a>(ISSUE3_PATH, 4); }
+    #[test] fn decompression_ppmd7a_pg100_4() { test_decompression::<PPMd7a>(PG100_PATH, 4); }
+    #[test] fn decompression_ppmd7a_pg6800_4() { test_decompression::<PPMd7a>(PG6800_PATH, 4); }
 
     // PPMd7 Compression Tests - Level 5
     #[test] fn compression_ppmd7_apache2_5() { test_compression::<PPMd7>(APACHE2_PATH, 5); }
@@ -287,6 +392,20 @@ mod tests {
     #[test] fn decompression_ppmd8_pg100_5() { test_decompression::<PPMd8>(PG100_PATH, 5); }
     #[test] fn decompression_ppmd8_pg6800_5() { test_decompression::<PPMd8>(PG6800_PATH, 5); }
 
+    // PPMd7a Compression Tests - Level 5
+    #[test] fn compression_ppmd7a_apache2_5() { test_compression::<PPMd7a>(APACHE2_PATH, 5); }
+    #[test] fn compression_ppmd7a_gpl3_5() { test_compression::<PPMd7a>(GPL3_PATH, 5); }
+    #[test] fn compression_ppmd7a_issue3_5() { test_compression::<PPMd7a>(ISSUE3_PATH, 5); }
+    #[test] fn compression_ppmd7a_pg100_5() { test_compression::<PPMd7a>(PG100_PATH, 5); }
+    #[test] fn compression_ppmd7a_pg6800_5() { test_compression::<PPMd7a>(PG6800_PATH, 5); }
+
+    // PPMd7a Decompression Tests - Level 5
+    #[test] fn decompression_ppmd7a_apache2_5() { test_decompression::<PPMd7a>(APACHE2_PATH, 5); }
+    #[test] fn decompression_ppmd7a_gpl3_5() { test_decompression::<PPMd7a>(GPL3_PATH, 5); }
+    #[test] fn decompression_ppmd7a_issue3_5() { test_decompression::<PPMd7a>(ISSUE3_PATH, 5); }
+    #[test] fn decompression_ppmd7a_pg100_5() { test_decompression::<PPMd7a>(PG100_PATH, 5); }
+    #[test] fn decompression_ppmd7a_pg6800_5() { test_decompression::<PPMd7a>(PG6800_PATH, 5); }
+
     // PPMd7 Compression Tests - Level 6
     #[test] fn compression_ppmd7_apache2_6() { test_compression::<PPMd7>(APACHE2_PATH, 6); }
     #[test] fn compression_ppmd7_gpl3_6() { test_compression::<PPMd7>(GPL3_PATH, 6); }
@@ -314,6 +433,20 @@ mod tests {
     #[test] fn decompression_ppmd8_issue3_6() { test_decompression::<PPMd8>(ISSUE3_PATH, 6); }
     #[test] fn decompression_ppmd8_pg100_6() { test_decompression::<PPMd8>(PG100_PATH, 6); }
     #[test] fn decompression_ppmd8_pg6800_6() { test_decompression::<PPMd8>(PG6800_PATH, 6); }
+
+    // PPMd7a Compression Tests - Level 6
+    #[test] fn compression_ppmd7a_apache2_6() { test_compression::<PPMd7a>(APACHE2_PATH, 6); }
+    #[test] fn compression_ppmd7a_gpl3_6() { test_compression::<PPMd7a>(GPL3_PATH, 6); }
+    #[test] fn compression_ppmd7a_issue3_6() { test_compression::<PPMd7a>(ISSUE3_PATH, 6); }
+    #[test] fn compression_ppmd7a_pg100_6() { test_compression::<PPMd7a>(PG100_PATH, 6); }
+    #[test] fn compression_ppmd7a_pg6800_6() { test_compression::<PPMd7a>(PG6800_PATH, 6); }
+
+    // PPMd7a Decompression Tests - Level 6
+    #[test] fn decompression_ppmd7a_apache2_6() { test_decompression::<PPMd7a>(APACHE2_PATH, 6); }
+    #[test] fn decompression_ppmd7a_gpl3_6() { test_decompression::<PPMd7a>(GPL3_PATH, 6); }
+    #[test] fn decompression_ppmd7a_issue3_6() { test_decompression::<PPMd7a>(ISSUE3_PATH, 6); }
+    #[test] fn decompression_ppmd7a_pg100_6() { test_decompression::<PPMd7a>(PG100_PATH, 6); }
+    #[test] fn decompression_ppmd7a_pg6800_6() { test_decompression::<PPMd7a>(PG6800_PATH, 6); }
 
     // PPMd7 Compression Tests - Level 7
     #[test] fn compression_ppmd7_apache2_7() { test_compression::<PPMd7>(APACHE2_PATH, 7); }
@@ -343,6 +476,20 @@ mod tests {
     #[test] fn decompression_ppmd8_pg100_7() { test_decompression::<PPMd8>(PG100_PATH, 7); }
     #[test] fn decompression_ppmd8_pg6800_7() { test_decompression::<PPMd8>(PG6800_PATH, 7); }
 
+    // PPMd7a Compression Tests - Level 7
+    #[test] fn compression_ppmd7a_apache2_7() { test_compression::<PPMd7a>(APACHE2_PATH, 7); }
+    #[test] fn compression_ppmd7a_gpl3_7() { test_compression::<PPMd7a>(GPL3_PATH, 7); }
+    #[test] fn compression_ppmd7a_issue3_7() { test_compression::<PPMd7a>(ISSUE3_PATH, 7); }
+    #[test] fn compression_ppmd7a_pg100_7() { test_compression::<PPMd7a>(PG100_PATH, 7); }
+    #[test] fn compression_ppmd7a_pg6800_7() { test_compression::<PPMd7a>(PG6800_PATH, 7); }
+
+    // PPMd7a Decompression Tests - Level 7
+    #[test] fn decompression_ppmd7a_apache2_7() { test_decompression::<PPMd7a>(APACHE2_PATH, 7); }
+    #[test] fn decompression_ppmd7a_gpl3_7() { test_decompression::<PPMd7a>(GPL3_PATH, 7); }
+    #[test] fn decompression_ppmd7a_issue3_7() { test_decompression::<PPMd7a>(ISSUE3_PATH, 7); }
+    #[test] fn decompression_ppmd7a_pg100_7() { test_decompression::<PPMd7a>(PG100_PATH, 7); }
+    #[test] fn decompression_ppmd7a_pg6800_7() { test_decompression::<PPMd7a>(PG6800_PATH, 7); }
+
     // PPMd7 Compression Tests - Level 8
     #[test] fn compression_ppmd7_apache2_8() { test_compression::<PPMd7>(APACHE2_PATH, 8); }
     #[test] fn compression_ppmd7_gpl3_8() { test_compression::<PPMd7>(GPL3_PATH, 8); }
@@ -371,6 +518,20 @@ mod tests {
     #[test] fn decompression_ppmd8_pg100_8() { test_decompression::<PPMd8>(PG100_PATH, 8); }
     #[test] fn decompression_ppmd8_pg6800_8() { test_decompression::<PPMd8>(PG6800_PATH, 8); }
 
+    // PPMd7a Compression Tests - Level 8
+    #[test] fn compression_ppmd7a_apache2_8() { test_compression::<PPMd7a>(APACHE2_PATH, 8); }
+    #[test] fn compression_ppmd7a_gpl3_8() { test_compression::<PPMd7a>(GPL3_PATH, 8); }
+    #[test] fn compression_ppmd7a_issue3_8() { test_compression::<PPMd7a>(ISSUE3_PATH, 8); }
+    #[test] fn compression_ppmd7a_pg100_8() { test_compression::<PPMd7a>(PG100_PATH, 8); }
+    #[test] fn compression_ppmd7a_pg6800_8() { test_compression::<PPMd7a>(PG6800_PATH, 8); }
+
+    // PPMd7a Decompression Tests - Level 8
+    #[test] fn decompression_ppmd7a_apache2_8() { test_decompression::<PPMd7a>(APACHE2_PATH, 8); }
+    #[test] fn decompression_ppmd7a_gpl3_8() { test_decompression::<PPMd7a>(GPL3_PATH, 8); }
+    #[test] fn decompression_ppmd7a_issue3_8() { test_decompression::<PPMd7a>(ISSUE3_PATH, 8); }
+    #[test] fn decompression_ppmd7a_pg100_8() { test_decompression::<PPMd7a>(PG100_PATH, 8); }
+    #[test] fn decompression_ppmd7a_pg6800_8() { test_decompression::<PPMd7a>(PG6800_PATH, 8); }
+
     // PPMd7 Compression Tests - Level 9
     #[test] fn compression_ppmd7_apache2_9() { test_compression::<PPMd7>(APACHE2_PATH, 9); }
     #[test] fn compression_ppmd7_gpl3_9() { test_compression::<PPMd7>(GPL3_PATH, 9); }
@@ -398,4 +559,18 @@ mod tests {
     #[test] fn decompression_ppmd8_issue3_9() { test_decompression::<PPMd8>(ISSUE3_PATH, 9); }
     #[test] fn decompression_ppmd8_pg100_9() { test_decompression::<PPMd8>(PG100_PATH, 9); }
     #[test] fn decompression_ppmd8_pg6800_9() { test_decompression::<PPMd8>(PG6800_PATH, 9); }
+
+    // PPMd7a Compression Tests - Level 9
+    #[test] fn compression_ppmd7a_apache2_9() { test_compression::<PPMd7a>(APACHE2_PATH, 9); }
+    #[test] fn compression_ppmd7a_gpl3_9() { test_compression::<PPMd7a>(GPL3_PATH, 9); }
+    #[test] fn compression_ppmd7a_issue3_9() { test_compression::<PPMd7a>(ISSUE3_PATH, 9); }
+    #[test] fn compression_ppmd7a_pg100_9() { test_compression::<PPMd7a>(PG100_PATH, 9); }
+    #[test] fn compression_ppmd7a_pg6800_9() { test_compression::<PPMd7a>(PG6800_PATH, 9); }
+
+    // PPMd7a Decompression Tests - Level 9
+    #[test] fn decompression_ppmd7a_apache2_9() { test_decompression::<PPMd7a>(APACHE2_PATH, 9); }
+    #[test] fn decompression_ppmd7a_gpl3_9() { test_decompression::<PPMd7a>(GPL3_PATH, 9); }
+    #[test] fn decompression_ppmd7a_issue3_9() { test_decompression::<PPMd7a>(ISSUE3_PATH, 9); }
+    #[test] fn decompression_ppmd7a_pg100_9() { test_decompression::<PPMd7a>(PG100_PATH, 9); }
+    #[test] fn decompression_ppmd7a_pg6800_9() { test_decompression::<PPMd7a>(PG6800_PATH, 9); }
 }
