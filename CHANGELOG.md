@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.5.0 - 2026-09-14
+
 ### Added
 
 - Added `Ppmd7aDecoder` and `Ppmd7aEncoder` for PPMd7 (PPMdH) with the carryless range coder (PPMd7a), as used
