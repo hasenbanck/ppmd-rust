@@ -31,6 +31,8 @@
 //! Licensed under [CC-0](https://spdx.org/licenses/CC0-1.0) or
 //! [MIT-0](https://spdx.org/licenses/MIT-0), at your option.
 
+#![forbid(unsafe_code)]
+
 mod internal;
 
 mod decoder_7;
@@ -56,10 +58,6 @@ pub const PPMD7_MAX_ORDER: u32 = 64;
 /// The minimal memory that PPMd7 supports.
 pub const PPMD7_MIN_MEM_SIZE: u32 = 2048;
 
-#[cfg(feature = "unstable-tagged-offsets")]
-/// The maximal memory that PPMd7 supports (512 MiB).
-pub const PPMD7_MAX_MEM_SIZE: u32 = 1 << 29;
-#[cfg(not(feature = "unstable-tagged-offsets"))]
 /// The maximal memory that PPMd7 supports (~4 GiB).
 pub const PPMD7_MAX_MEM_SIZE: u32 = u32::MAX - 36;
 
@@ -76,10 +74,6 @@ pub const PPMD8_MAX_ORDER: u32 = 16;
 /// terminates for a memory size below 2064 bytes.
 pub const PPMD8_MIN_MEM_SIZE: u32 = 2064;
 
-#[cfg(feature = "unstable-tagged-offsets")]
-/// The maximal memory that PPMd8 supports (512 MiB).
-pub const PPMD8_MAX_MEM_SIZE: u32 = 1 << 29;
-#[cfg(not(feature = "unstable-tagged-offsets"))]
 /// The maximal memory that PPMd8 supports (4 GiB).
 pub const PPMD8_MAX_MEM_SIZE: u32 = u32::MAX;
 

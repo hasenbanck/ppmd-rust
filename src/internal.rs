@@ -2,9 +2,9 @@ pub(crate) mod ppmd7;
 
 pub(crate) mod ppmd8;
 
-mod tagged_offset;
+mod memory;
 
-pub(crate) use tagged_offset::*;
+use memory::{CtxRef, Memory, StateRef, Successor, UnitRef, UNIT_SIZE};
 
 const PPMD_INT_BITS: u32 = 7;
 const PPMD_PERIOD_BITS: u32 = 7;
@@ -53,71 +53,4 @@ impl See {
             self.count = (3 << fresh as i32) as u8;
         }
     }
-}
-
-#[derive(Copy, Clone)]
-#[repr(C, packed)]
-struct State {
-    symbol: u8,
-    freq: u8,
-    successor_0: u16,
-    successor_1: u16,
-}
-
-impl Pointee for State {
-    const TAG: u32 = TAG_STATE;
-}
-
-impl State {
-    fn set_successor(&mut self, v: TaggedOffset) {
-        let raw = v.as_raw();
-        self.successor_0 = raw as u16;
-        self.successor_1 = (raw >> 16) as u16;
-    }
-
-    fn get_successor(&self) -> TaggedOffset {
-        let raw = self.successor_0 as u32 + ((self.successor_1 as u32) << 16);
-        TaggedOffset::from_raw(raw)
-    }
-}
-
-#[derive(Copy, Clone)]
-#[repr(C, packed)]
-struct State2 {
-    symbol: u8,
-    freq: u8,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C, packed)]
-struct State4 {
-    successor_0: u16,
-    successor_1: u16,
-}
-
-impl State4 {
-    fn set_successor(&mut self, v: TaggedOffset) {
-        let raw = v.as_raw();
-        self.successor_0 = raw as u16;
-        self.successor_1 = (raw >> 16) as u16;
-    }
-
-    fn get_successor(&self) -> TaggedOffset {
-        let raw = self.successor_0 as u32 + ((self.successor_1 as u32) << 16);
-        TaggedOffset::from_raw(raw)
-    }
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-union Union2 {
-    summ_freq: u16,
-    state2: State2,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-union Union4 {
-    stats: TaggedOffset,
-    state4: State4,
 }
