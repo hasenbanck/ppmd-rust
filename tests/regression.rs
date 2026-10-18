@@ -2,7 +2,7 @@
 
 use std::io::{Read, Write};
 
-use ppmd_rust::{Ppmd8Decoder, Ppmd8Encoder, RestoreMethod};
+use ppmd_rust::{Ppmd8Decoder, Ppmd8Encoder, RestoreMethod, PPMD8_MIN_MEM_SIZE};
 
 /// Deterministic pseudo natural language text.
 ///
@@ -108,4 +108,71 @@ fn ppmd8_cut_off_round_trip() {
     }
 
     assert_eq!(decompressed, text);
+}
+
+/// Issue #19: PPMd8 never terminated for a memory size between 2048 and 2063.
+///
+/// The order 0 context with its 256 symbols occupies 1548 bytes. `restore_model()` with
+/// [`RestoreMethod::CutOff`] reduces the model until it uses at most three quarters of
+/// the memory. For a memory size below 2064 the order 0 context alone exceeds that bound.
+///
+/// Every memory size from the minimum on must round trip with every restoration method.
+/// The work runs on a separate thread and the test fails when it does not finish in time.
+#[test]
+fn ppmd8_minimum_memory_size_round_trip() {
+    let (sender, receiver) = std::sync::mpsc::channel();
+
+    std::thread::spawn(move || {
+        let text = pseudo_text(16 << 10);
+
+        for order in [2, 6, 16] {
+            for memory_size in PPMD8_MIN_MEM_SIZE..PPMD8_MIN_MEM_SIZE + 64 {
+                for restore_method in [
+                    RestoreMethod::Restart,
+                    RestoreMethod::CutOff,
+                    RestoreMethod::Unsupported,
+                ] {
+                    let mut compressed = Vec::new();
+                    {
+                        let mut encoder =
+                            Ppmd8Encoder::new(&mut compressed, order, memory_size, restore_method)
+                                .unwrap();
+                        encoder.write_all(&text).unwrap();
+                        encoder.finish(true).unwrap();
+                    }
+
+                    let mut decompressed = Vec::new();
+                    {
+                        let mut decoder = Ppmd8Decoder::new(
+                            compressed.as_slice(),
+                            order,
+                            memory_size,
+                            restore_method,
+                        )
+                        .unwrap();
+                        decoder.read_to_end(&mut decompressed).unwrap();
+                    }
+
+                    assert_eq!(decompressed, text);
+                }
+            }
+        }
+
+        sender.send(()).unwrap();
+    });
+
+    receiver
+        .recv_timeout(std::time::Duration::from_secs(120))
+        .expect("PPMd8 did not terminate");
+}
+
+/// Issue #19: a memory size below 2064 is rejected.
+#[test]
+fn ppmd8_memory_size_below_minimum_is_rejected() {
+    for memory_size in [2048, PPMD8_MIN_MEM_SIZE - 1] {
+        assert!(Ppmd8Encoder::new(Vec::new(), 6, memory_size, RestoreMethod::CutOff).is_err());
+        assert!(
+            Ppmd8Decoder::new([0u8; 8].as_slice(), 6, memory_size, RestoreMethod::CutOff).is_err()
+        );
+    }
 }

@@ -70,7 +70,11 @@ pub const PPMD8_MIN_ORDER: u32 = 2;
 pub const PPMD8_MAX_ORDER: u32 = 16;
 
 /// The minimal memory that PPMd8 supports.
-pub const PPMD8_MIN_MEM_SIZE: u32 = 2048;
+///
+/// 7-Zip defines no minimum memory size for PPMd8. Its ZIP and `.pmd` codecs specify
+/// the memory size in MiB and always use at least 1 MiB. The model restoration never
+/// terminates for a memory size below 2064 bytes.
+pub const PPMD8_MIN_MEM_SIZE: u32 = 2064;
 
 #[cfg(feature = "unstable-tagged-offsets")]
 /// The maximal memory that PPMd8 supports (512 MiB).

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.5.1 - 2026-10-18
+
+### Fixed
+
+- Fixed an infinite loop in the PPMd8 model restoration for a memory size between 2048 and 2063 bytes.
+  `PPMD8_MIN_MEM_SIZE` is now 2064. The previous value 2048 was the minimum memory size of PPMd7. 7-Zip
+  defines no minimum memory size for PPMd8 and has the same infinite loop for these sizes. The ZIP and
+  `.pmd` codecs of 7-Zip always use at least 1 MiB and are unaffected. (#19)
+
 ## 1.5.0 - 2026-09-14
 
 ### Added
