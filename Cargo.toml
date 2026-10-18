@@ -16,3 +16,6 @@ default = []
 unstable-tagged-offsets = []
 
 [dependencies]
+
+[profile.test]
+opt-level = 1

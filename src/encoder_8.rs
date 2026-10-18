@@ -58,7 +58,7 @@ impl<W: Write> Ppmd8Encoder<W> {
         if with_end_marker {
             self.ppmd.encode_symbol(SYM_END)?;
         }
-        self.flush()?;
+        self.ppmd.flush_range_encoder()?;
         Ok(self.into_inner())
     }
 }
@@ -76,8 +76,10 @@ impl<W: Write> Write for Ppmd8Encoder<W> {
         Ok(buf.len())
     }
 
+    /// Flushes the inner writer. The range coder writes its final bytes in
+    /// [`finish`](Self::finish), so the stream continues after a flush.
     fn flush(&mut self) -> std::io::Result<()> {
-        self.ppmd.flush_range_encoder()
+        self.ppmd.get_mut().flush()
     }
 }
 
@@ -127,6 +129,39 @@ mod test {
 
         let mut decoder =
             Ppmd8Decoder::new(writer.as_slice(), ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
+
+        let mut decoded = Vec::new();
+        decoder.read_to_end(&mut decoded).unwrap();
+
+        let decoded_data = String::from_utf8(decoded).unwrap();
+        assert_eq!(decoded_data, test_data);
+    }
+
+    #[test]
+    fn ppmd8encoder_flush_between_writes() {
+        let test_data = include_str!("../tests/fixtures/text/apache2.txt");
+        let (first, second) = test_data.as_bytes().split_at(test_data.len() / 2);
+
+        let encode = |flush: bool| {
+            let mut data = Vec::new();
+            {
+                let mut encoder =
+                    Ppmd8Encoder::new(&mut data, ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
+                encoder.write_all(first).unwrap();
+                if flush {
+                    encoder.flush().unwrap();
+                }
+                encoder.write_all(second).unwrap();
+                encoder.finish(true).unwrap();
+            }
+            data
+        };
+
+        let data = encode(true);
+        assert_eq!(data, encode(false));
+
+        let mut decoder =
+            Ppmd8Decoder::new(data.as_slice(), ORDER, MEM_SIZE, RESTORE_METHOD).unwrap();
 
         let mut decoded = Vec::new();
         decoder.read_to_end(&mut decoded).unwrap();

@@ -12,9 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The implementation is now 100% safe Rust and the crate forbids `unsafe` code.
-- No behavioural changes. The crate stays 100% compatible.
+- Fully binary compatible with 1.5.1. Both versions produce byte-identical compressed data and decode each
+  other's data.
 - Deprecated the `unstable-tagged-offsets` feature. The bounds checks of the safe implementation replace it.
   It's inert and will be removed in version 2 of the crate.
+
+### Fixed
+
+- Fixed `Write::flush` of the encoders ending the compressed stream, which corrupted all data written after a
+  `flush()` call. `flush()` now flushes the inner writer, and `finish()` writes the final bytes of the range coder.
 
 ## 1.5.1 - 2026-10-18
 
