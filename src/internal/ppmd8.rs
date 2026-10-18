@@ -54,85 +54,85 @@ trait Records {
     fn set_nu(&mut self, node: UnitRef, value: u32);
 }
 
-impl Records for Memory {
+impl<B: AsRef<[u8]> + AsMut<[u8]>> Records for Memory<B> {
     #[inline(always)]
     fn num_stats(&self, ctx: CtxRef) -> u32 {
-        self.u8(ctx.offset()) as u32
+        self.unit_u8(ctx.offset(), 0) as u32
     }
 
     #[inline(always)]
     fn set_num_stats(&mut self, ctx: CtxRef, value: u32) {
-        self.set_u8(ctx.offset(), value as u8);
+        self.set_unit_u8(ctx.offset(), 0, value as u8);
     }
 
     #[inline(always)]
     fn flags(&self, ctx: CtxRef) -> u8 {
-        self.u8(ctx.offset() + 1)
+        self.unit_u8(ctx.offset(), 1)
     }
 
     #[inline(always)]
     fn set_flags(&mut self, ctx: CtxRef, value: u8) {
-        self.set_u8(ctx.offset() + 1, value);
+        self.set_unit_u8(ctx.offset(), 1, value);
     }
 
     #[inline(always)]
     fn summ_freq(&self, ctx: CtxRef) -> u32 {
-        self.u16(ctx.offset() + 2) as u32
+        self.unit_u16(ctx.offset(), 2) as u32
     }
 
     #[inline(always)]
     fn set_summ_freq(&mut self, ctx: CtxRef, value: u32) {
-        self.set_u16(ctx.offset() + 2, value as u16);
+        self.set_unit_u16(ctx.offset(), 2, value as u16);
     }
 
     #[inline(always)]
     fn stats(&self, ctx: CtxRef) -> StateRef {
-        StateRef::at(self.u32(ctx.offset() + 4))
+        StateRef::at(self.unit_u32(ctx.offset(), 4))
     }
 
     #[inline(always)]
     fn set_stats(&mut self, ctx: CtxRef, value: StateRef) {
-        self.set_u32(ctx.offset() + 4, value.offset());
+        self.set_unit_u32(ctx.offset(), 4, value.offset());
     }
 
     #[inline(always)]
     fn suffix(&self, ctx: CtxRef) -> CtxRef {
-        CtxRef::at(self.u32(ctx.offset() + 8))
+        CtxRef::at(self.unit_u32(ctx.offset(), 8))
     }
 
     #[inline(always)]
     fn set_suffix(&mut self, ctx: CtxRef, value: CtxRef) {
-        self.set_u32(ctx.offset() + 8, value.offset());
+        self.set_unit_u32(ctx.offset(), 8, value.offset());
     }
 
     #[inline(always)]
     fn stamp(&self, node: UnitRef) -> u32 {
-        self.u32(node.offset())
+        self.unit_u32(node.offset(), 0)
     }
 
     #[inline(always)]
     fn set_stamp(&mut self, node: UnitRef, value: u32) {
-        self.set_u32(node.offset(), value);
+        self.set_unit_u32(node.offset(), 0, value);
     }
 
     #[inline(always)]
     fn node_next(&self, node: UnitRef) -> UnitRef {
-        UnitRef::at(self.u32(node.offset() + 4))
+        UnitRef::at(self.unit_u32(node.offset(), 4))
     }
 
     #[inline(always)]
     fn set_node_next(&mut self, node: UnitRef, value: UnitRef) {
-        self.set_u32(node.offset() + 4, value.offset());
+        self.set_unit_u32(node.offset(), 4, value.offset());
     }
 
     #[inline(always)]
     fn nu(&self, node: UnitRef) -> u32 {
-        self.u32(node.offset() + 8)
+        self.unit_u32(node.offset(), 8)
     }
 
     #[inline(always)]
     fn set_nu(&mut self, node: UnitRef, value: u32) {
-        self.set_u32(node.offset() + 8, value);
+        self.set_unit_u32(node.offset(), 8, value);
     }
 }
 
@@ -582,9 +582,13 @@ impl<RC> PPMd8<RC> {
     /// Returns the state with the given symbol in the stats of a context with more than one
     /// state.
     #[inline(always)]
-    fn find_state(&self, ctx: CtxRef, symbol: u8) -> StateRef {
-        let mut s = self.mem.stats(ctx);
-        while self.mem.symbol(s) != symbol {
+    fn find_state<B: AsRef<[u8]> + AsMut<[u8]>>(
+        mem: &Memory<B>,
+        ctx: CtxRef,
+        symbol: u8,
+    ) -> StateRef {
+        let mut s = mem.stats(ctx);
+        while mem.symbol(s) != symbol {
             s = s.next();
         }
         s
@@ -592,17 +596,16 @@ impl<RC> PPMd8<RC> {
 
     /// Converts a context into a binary context with the state `s` as its one state.
     fn set_one_state_from(&mut self, ctx: CtxRef, s: StateRef) {
-        let symbol = self.mem.symbol(s);
-        self.mem.set_flags(
+        let mut mem = self.mem.view();
+        let symbol = mem.symbol(s);
+        mem.set_flags(
             ctx,
-            ((self.mem.flags(ctx) & FLAG_PREV_HIGH) as u32 + Self::hi_bits_flag3(symbol as u32))
-                as u8,
+            ((mem.flags(ctx) & FLAG_PREV_HIGH) as u32 + Self::hi_bits_flag3(symbol as u32)) as u8,
         );
         let one_state = ctx.one_state();
-        self.mem.set_symbol(one_state, symbol);
-        self.mem
-            .set_freq(one_state, ((self.mem.freq(s) as u32 + 11) >> 3) as u8);
-        self.mem.set_successor(one_state, self.mem.successor(s));
+        mem.set_symbol(one_state, symbol);
+        mem.set_freq(one_state, ((mem.freq(s) as u32 + 11) >> 3) as u8);
+        mem.set_successor(one_state, mem.successor(s));
     }
 
     /// This function is called when we remove some symbols (successors) in context.
@@ -614,27 +617,28 @@ impl<RC> PPMd8<RC> {
         let mut s = self
             .shrink_units(states, old_nu, (num_stats + 2) >> 1)
             .as_states();
-        self.mem.set_stats(ctx, s);
+        let mut mem = self.mem.view();
+        mem.set_stats(ctx, s);
 
-        scale |= (self.mem.summ_freq(ctx) >= 1 << 15) as u32;
+        scale |= (mem.summ_freq(ctx) >= 1 << 15) as u32;
 
-        let mut flags = Self::hi_bits_prepare(self.mem.symbol(s) as u32);
-        let mut freq = self.mem.freq(s) as u32;
-        let mut esc_freq = self.mem.summ_freq(ctx) - freq;
+        let mut flags = Self::hi_bits_prepare(mem.symbol(s) as u32);
+        let mut freq = mem.freq(s) as u32;
+        let mut esc_freq = mem.summ_freq(ctx) - freq;
         freq = freq.wrapping_add(scale) >> scale;
         let mut sum_freq = freq;
-        self.mem.set_freq(s, freq as u8);
+        mem.set_freq(s, freq as u8);
 
         let mut i = num_stats;
 
         loop {
             s = s.next();
-            let mut freq = self.mem.freq(s) as u32;
+            let mut freq = mem.freq(s) as u32;
             esc_freq -= freq;
             freq = freq.wrapping_add(scale) >> scale;
             sum_freq += freq;
-            self.mem.set_freq(s, freq as u8);
-            flags |= Self::hi_bits_prepare(self.mem.symbol(s) as u32);
+            mem.set_freq(s, freq as u8);
+            flags |= Self::hi_bits_prepare(mem.symbol(s) as u32);
 
             i -= 1;
             if i == 0 {
@@ -642,11 +646,10 @@ impl<RC> PPMd8<RC> {
             }
         }
 
-        self.mem
-            .set_summ_freq(ctx, sum_freq + ((esc_freq + scale) >> scale));
-        self.mem.set_flags(
+        mem.set_summ_freq(ctx, sum_freq + ((esc_freq + scale) >> scale));
+        mem.set_flags(
             ctx,
-            ((self.mem.flags(ctx) as u32 & (FLAG_PREV_HIGH as u32 + FLAG_RESCALED as u32 * scale))
+            ((mem.flags(ctx) as u32 & (FLAG_PREV_HIGH as u32 + FLAG_RESCALED as u32 * scale))
                 + Self::hi_bits_convert_3(flags)) as u8,
         );
     }
@@ -703,23 +706,24 @@ impl<RC> PPMd8<RC> {
         let mut s = stats.add(ns as u32);
 
         loop {
-            let successor = self.mem.successor(s);
-            if !self.is_real_context(successor) {
+            let mut mem = self.mem.view();
+            let successor = mem.successor(s);
+            if !successor.is_real_context(self.units_start) {
                 let s2 = stats.add(ns as u32);
                 ns -= 1;
                 if order != 0 {
                     if s != s2 {
-                        self.mem.copy_state(s2, s);
+                        mem.copy_state(s2, s);
                     }
                 } else {
-                    self.mem.swap_states(s, s2);
-                    self.mem.set_successor(s2, Successor::NULL);
+                    mem.swap_states(s, s2);
+                    mem.set_successor(s2, Successor::NULL);
                 }
             } else if order < self.max_order {
                 let successor = self.cut_off(successor.context(), order + 1);
                 self.mem.set_successor(s, Successor::from(successor));
             } else {
-                self.mem.set_successor(s, Successor::NULL);
+                mem.set_successor(s, Successor::NULL);
             }
 
             if s == stats {
@@ -831,7 +835,8 @@ impl<RC> PPMd8<RC> {
         s1: &mut Option<StateRef>,
         mut c: CtxRef,
     ) -> Option<CtxRef> {
-        let up_branch = self.mem.successor(self.found_state);
+        let mut mem = self.mem.view();
+        let up_branch = mem.successor(self.found_state);
         let mut num_ps = 0;
         // Fixed over Shkarin's code. Maybe it could work without + 1 too.
         let mut ps = [StateRef::NULL; PPMD8_MAX_ORDER as usize + 1];
@@ -841,31 +846,31 @@ impl<RC> PPMd8<RC> {
             num_ps += 1;
         }
 
-        while !self.mem.suffix(c).is_null() {
-            c = self.mem.suffix(c);
+        while !mem.suffix(c).is_null() {
+            c = mem.suffix(c);
 
             let s = if let Some(state) = s1.take() {
                 state
-            } else if self.mem.num_stats(c) != 0 {
-                let s = self.find_state(c, self.mem.symbol(self.found_state));
-                let freq = self.mem.freq(s);
+            } else if mem.num_stats(c) != 0 {
+                let s = Self::find_state(&mem, c, mem.symbol(self.found_state));
+                let freq = mem.freq(s);
                 if freq < MAX_FREQ - 9 {
-                    self.mem.set_freq(s, freq + 1);
-                    self.mem.set_summ_freq(c, self.mem.summ_freq(c) + 1);
+                    mem.set_freq(s, freq + 1);
+                    mem.set_summ_freq(c, mem.summ_freq(c) + 1);
                 }
                 s
             } else {
                 let s = c.one_state();
-                let freq = self.mem.freq(s) as u32;
-                let suffix_num_stats = self.mem.num_stats(self.mem.suffix(c));
-                self.mem.set_freq(
+                let freq = mem.freq(s) as u32;
+                let suffix_num_stats = mem.num_stats(mem.suffix(c));
+                mem.set_freq(
                     s,
                     (freq + ((suffix_num_stats == 0) as u32 & (freq < 24) as u32)) as u8,
                 );
                 s
             };
 
-            let successor = self.mem.successor(s);
+            let successor = mem.successor(s);
             if successor != up_branch {
                 c = successor.context();
                 if num_ps == 0 {
@@ -877,18 +882,18 @@ impl<RC> PPMd8<RC> {
             num_ps += 1;
         }
 
-        let new_sym = self.mem.text(up_branch.text_position());
+        let new_sym = mem.text(up_branch.text_position());
         let up_branch = Successor::text(up_branch.text_position() + 1);
 
-        let flags = (Self::hi_bits_flag4(self.mem.symbol(self.found_state) as u32)
+        let flags = (Self::hi_bits_flag4(mem.symbol(self.found_state) as u32)
             + Self::hi_bits_flag3(new_sym as u32)) as u8;
 
-        let new_freq = if self.mem.num_stats(c) == 0 {
-            self.mem.freq(c.one_state())
+        let new_freq = if mem.num_stats(c) == 0 {
+            mem.freq(c.one_state())
         } else {
-            let s = self.find_state(c, new_sym);
-            let cf = (self.mem.freq(s) as u32) - 1;
-            let s0 = self.mem.summ_freq(c) - self.mem.num_stats(c) - cf;
+            let s = Self::find_state(&mem, c, new_sym);
+            let cf = (mem.freq(s) as u32) - 1;
+            let s0 = mem.summ_freq(c) - mem.num_stats(c) - cf;
             1 + (if 2 * cf <= s0 {
                 (5 * cf > s0) as u32
             } else {
@@ -907,16 +912,17 @@ impl<RC> PPMd8<RC> {
             }
             .as_ctx();
 
-            self.mem.set_flags(c1, flags);
-            self.mem.set_num_stats(c1, 0);
+            let mut mem = self.mem.view();
+            mem.set_flags(c1, flags);
+            mem.set_num_stats(c1, 0);
             let one_state = c1.one_state();
-            self.mem.set_symbol(one_state, new_sym);
-            self.mem.set_freq(one_state, new_freq);
-            self.mem.set_successor(one_state, up_branch);
-            self.mem.set_suffix(c1, c);
+            mem.set_symbol(one_state, new_sym);
+            mem.set_freq(one_state, new_freq);
+            mem.set_successor(one_state, up_branch);
+            mem.set_suffix(c1, c);
 
             num_ps -= 1;
-            self.mem.set_successor(ps[num_ps], Successor::from(c1));
+            mem.set_successor(ps[num_ps], Successor::from(c1));
 
             c = c1;
             if num_ps == 0 {
@@ -928,39 +934,40 @@ impl<RC> PPMd8<RC> {
     }
 
     fn reduce_order(&mut self, mut s1: Option<StateRef>, mut c: CtxRef) -> Option<CtxRef> {
+        let mut mem = self.mem.view();
         let mut s;
         let c1 = c;
         let up_branch = Successor::text(self.text);
 
-        self.mem.set_successor(self.found_state, up_branch);
+        mem.set_successor(self.found_state, up_branch);
         self.order_fall += 1;
 
         loop {
             if let Some(state) = s1.take() {
-                c = self.mem.suffix(c);
+                c = mem.suffix(c);
                 s = state;
             } else {
-                if self.mem.suffix(c).is_null() {
+                if mem.suffix(c).is_null() {
                     return Some(c);
                 }
-                c = self.mem.suffix(c);
-                if self.mem.num_stats(c) != 0 {
-                    s = self.find_state(c, self.mem.symbol(self.found_state));
-                    let freq = self.mem.freq(s);
+                c = mem.suffix(c);
+                if mem.num_stats(c) != 0 {
+                    s = Self::find_state(&mem, c, mem.symbol(self.found_state));
+                    let freq = mem.freq(s);
                     if freq < MAX_FREQ - 9 {
-                        self.mem.set_freq(s, freq + 2);
-                        self.mem.set_summ_freq(c, self.mem.summ_freq(c) + 2);
+                        mem.set_freq(s, freq + 2);
+                        mem.set_summ_freq(c, mem.summ_freq(c) + 2);
                     }
                 } else {
                     s = c.one_state();
-                    let freq = self.mem.freq(s);
-                    self.mem.set_freq(s, freq + (freq < 32) as u8);
+                    let freq = mem.freq(s);
+                    mem.set_freq(s, freq + (freq < 32) as u8);
                 }
             }
-            if !self.mem.successor(s).is_null() {
+            if !mem.successor(s).is_null() {
                 break;
             }
-            self.mem.set_successor(s, up_branch);
+            mem.set_successor(s, up_branch);
             self.order_fall += 1;
         }
 
@@ -988,36 +995,37 @@ impl<RC> PPMd8<RC> {
 
     #[inline(never)]
     fn update_model(&mut self) {
-        let mut min_successor = self.mem.successor(self.found_state);
-        let f_freq = self.mem.freq(self.found_state) as u32;
-        let f_symbol = self.mem.symbol(self.found_state);
+        let mut mem = self.mem.view();
+        let mut min_successor = mem.successor(self.found_state);
+        let f_freq = mem.freq(self.found_state) as u32;
+        let f_symbol = mem.symbol(self.found_state);
         let mut s: Option<StateRef> = None;
 
-        if f_freq < (MAX_FREQ / 4) as u32 && !self.mem.suffix(self.min_context).is_null() {
+        if f_freq < (MAX_FREQ / 4) as u32 && !mem.suffix(self.min_context).is_null() {
             // Update frequencies in suffix Context
-            let c = self.mem.suffix(self.min_context);
-            if self.mem.num_stats(c) == 0 {
+            let c = mem.suffix(self.min_context);
+            if mem.num_stats(c) == 0 {
                 let state = c.one_state();
-                let freq = self.mem.freq(state);
+                let freq = mem.freq(state);
                 if freq < 32 {
-                    self.mem.set_freq(state, freq + 1);
+                    mem.set_freq(state, freq + 1);
                 }
                 s = Some(state);
             } else {
-                let mut state = self.mem.stats(c);
+                let mut state = mem.stats(c);
 
-                if self.mem.symbol(state) != f_symbol {
-                    state = self.find_state(c, f_symbol);
-                    if self.mem.freq(state) >= self.mem.freq(state.prev()) {
-                        self.mem.swap_states(state, state.prev());
+                if mem.symbol(state) != f_symbol {
+                    state = Self::find_state(&mem, c, f_symbol);
+                    if mem.freq(state) >= mem.freq(state.prev()) {
+                        mem.swap_states(state, state.prev());
                         state = state.prev();
                     }
                 }
 
-                let freq = self.mem.freq(state);
+                let freq = mem.freq(state);
                 if freq < MAX_FREQ - 9 {
-                    self.mem.set_freq(state, freq + 2);
-                    self.mem.set_summ_freq(c, self.mem.summ_freq(c) + 2);
+                    mem.set_freq(state, freq + 2);
+                    mem.set_summ_freq(c, mem.summ_freq(c) + 2);
                 }
 
                 s = Some(state);
@@ -1101,29 +1109,31 @@ impl<RC> PPMd8<RC> {
                 };
                 let s = s.as_states();
 
+                let mut mem = self.mem.view();
                 let one_state = c.one_state();
-                let mut freq = self.mem.freq(one_state) as u32;
-                self.mem.set_symbol(s, self.mem.symbol(one_state));
-                self.mem.set_successor(s, self.mem.successor(one_state));
-                self.mem.set_stats(c, s);
+                let mut freq = mem.freq(one_state) as u32;
+                mem.set_symbol(s, mem.symbol(one_state));
+                mem.set_successor(s, mem.successor(one_state));
+                mem.set_stats(c, s);
 
                 if freq < (MAX_FREQ as u32 / 4 - 1) {
                     freq <<= 1;
                 } else {
                     freq = MAX_FREQ as u32 - 4;
                 }
-                self.mem.set_freq(s, freq as u8);
+                mem.set_freq(s, freq as u8);
 
                 sum = freq + self.init_esc + (ns > 2) as u32;
             }
 
-            let s = self.mem.stats(c).add(ns1 + 1);
+            let mut mem = self.mem.view();
+            let s = mem.stats(c).add(ns1 + 1);
             let mut cf = 2 * sum.wrapping_add(6) * f_freq;
             let sf = s0.wrapping_add(sum);
-            self.mem.set_symbol(s, f_symbol);
-            self.mem.set_num_stats(c, ns1.wrapping_add(1));
-            self.mem.set_successor(s, max_successor);
-            self.mem.set_flags(c, self.mem.flags(c) | flag);
+            mem.set_symbol(s, f_symbol);
+            mem.set_num_stats(c, ns1.wrapping_add(1));
+            mem.set_successor(s, max_successor);
+            mem.set_flags(c, mem.flags(c) | flag);
             if cf < 6 * sf {
                 cf = 1 + (cf > sf) as u32 + (cf >= 4 * sf) as u32;
                 sum = sum.wrapping_add(4);
@@ -1133,9 +1143,9 @@ impl<RC> PPMd8<RC> {
                 sum = sum.wrapping_add(cf);
             }
 
-            self.mem.set_summ_freq(c, sum);
-            self.mem.set_freq(s, cf as u8);
-            c = self.mem.suffix(c);
+            mem.set_summ_freq(c, sum);
+            mem.set_freq(s, cf as u8);
+            c = mem.suffix(c);
         }
 
         self.min_context = min_successor.context();
@@ -1144,52 +1154,53 @@ impl<RC> PPMd8<RC> {
 
     #[inline(never)]
     fn rescale(&mut self) {
+        let mut mem = self.mem.view();
         let mc = self.min_context;
-        let stats = self.mem.stats(mc);
+        let stats = mem.stats(mc);
         let mut s = self.found_state;
 
         // Sort the list by freq
         if s != stats {
-            let tmp = self.mem.state(s);
+            let tmp = mem.state(s);
             loop {
-                self.mem.copy_state(s.prev(), s);
+                mem.copy_state(s.prev(), s);
                 s = s.prev();
                 if s == stats {
                     break;
                 }
             }
-            self.mem.set_state(s, tmp);
+            mem.set_state(s, tmp);
         }
 
-        let mut sum_freq = self.mem.freq(s) as u32;
-        let mut esc_freq = self.mem.summ_freq(mc) - sum_freq;
+        let mut sum_freq = mem.freq(s) as u32;
+        let mut esc_freq = mem.summ_freq(mc) - sum_freq;
 
         let adder = (self.order_fall != 0) as u32;
 
         sum_freq = (sum_freq + 4 + adder) >> 1;
-        self.mem.set_freq(s, sum_freq as u8);
+        mem.set_freq(s, sum_freq as u8);
 
-        let mut i = self.mem.num_stats(mc);
+        let mut i = mem.num_stats(mc);
 
         loop {
             s = s.next();
-            let mut freq = self.mem.freq(s) as u32;
+            let mut freq = mem.freq(s) as u32;
             esc_freq -= freq;
             freq = freq.wrapping_add(adder) >> 1;
             sum_freq += freq;
-            self.mem.set_freq(s, freq as u8);
+            mem.set_freq(s, freq as u8);
 
-            if freq > self.mem.freq(s.prev()) as u32 {
-                let tmp = self.mem.state(s);
+            if freq > mem.freq(s.prev()) as u32 {
+                let tmp = mem.state(s);
                 let mut s1 = s;
                 loop {
-                    self.mem.copy_state(s1.prev(), s1);
+                    mem.copy_state(s1.prev(), s1);
                     s1 = s1.prev();
-                    if !(s1 != stats && freq > self.mem.freq(s1.prev()) as u32) {
+                    if !(s1 != stats && freq > mem.freq(s1.prev()) as u32) {
                         break;
                     }
                 }
-                self.mem.set_state(s1, tmp);
+                mem.set_state(s1, tmp);
             }
             i -= 1;
             if i == 0 {
@@ -1197,38 +1208,37 @@ impl<RC> PPMd8<RC> {
             }
         }
 
-        if self.mem.freq(s) == 0 {
+        if mem.freq(s) == 0 {
             // Remove all items with freq == 0
             let mut i = 0;
             loop {
                 i += 1;
                 s = s.prev();
-                if self.mem.freq(s) != 0 {
+                if mem.freq(s) != 0 {
                     break;
                 }
             }
 
             esc_freq += i;
-            let num_stats = self.mem.num_stats(mc);
+            let num_stats = mem.num_stats(mc);
             let num_stats_new = num_stats - i;
-            self.mem.set_num_stats(mc, num_stats_new);
+            mem.set_num_stats(mc, num_stats_new);
             let n0 = (num_stats + 2) >> 1;
 
             if num_stats_new == 0 {
-                let mut freq = (2u32 * (self.mem.freq(stats) as u32)).div_ceil(esc_freq);
+                let mut freq = (2u32 * (mem.freq(stats) as u32)).div_ceil(esc_freq);
                 if freq > (MAX_FREQ / 3) as u32 {
                     freq = (MAX_FREQ / 3) as u32;
                 }
-                self.mem.set_flags(
+                mem.set_flags(
                     mc,
-                    ((self.mem.flags(mc) & FLAG_PREV_HIGH) as u32
-                        + Self::hi_bits_flag3(self.mem.symbol(stats) as u32))
-                        as u8,
+                    ((mem.flags(mc) & FLAG_PREV_HIGH) as u32
+                        + Self::hi_bits_flag3(mem.symbol(stats) as u32)) as u8,
                 );
 
                 let s = mc.one_state();
-                self.mem.copy_state(stats, s);
-                self.mem.set_freq(s, freq as u8);
+                mem.copy_state(stats, s);
+                mem.set_freq(s, freq as u8);
                 self.found_state = s;
                 self.insert_node(stats.as_unit(), self.units2index[(n0 as usize) - 1] as u32);
                 return;
@@ -1307,13 +1317,14 @@ impl<RC> PPMd8<RC> {
     }
 
     fn update1(&mut self) {
+        let mut mem = self.mem.view();
         let mut s = self.found_state;
         let mc = self.min_context;
-        let freq = self.mem.freq(s) as u32 + 4;
-        self.mem.set_summ_freq(mc, self.mem.summ_freq(mc) + 4);
-        self.mem.set_freq(s, freq as u8);
-        if freq > self.mem.freq(s.prev()) as u32 {
-            self.mem.swap_states(s, s.prev());
+        let freq = mem.freq(s) as u32 + 4;
+        mem.set_summ_freq(mc, mem.summ_freq(mc) + 4);
+        mem.set_freq(s, freq as u8);
+        if freq > mem.freq(s.prev()) as u32 {
+            mem.swap_states(s, s.prev());
             s = s.prev();
             self.found_state = s;
             if freq > MAX_FREQ as u32 {
@@ -1324,15 +1335,16 @@ impl<RC> PPMd8<RC> {
     }
 
     fn update1_0(&mut self) {
+        let mut mem = self.mem.view();
         let s = self.found_state;
         let mc = self.min_context;
-        let mut freq = self.mem.freq(s) as u32;
-        let summ_freq = self.mem.summ_freq(mc);
+        let mut freq = mem.freq(s) as u32;
+        let summ_freq = mem.summ_freq(mc);
         self.prev_success = (2 * freq >= summ_freq) as u32; // Ppmd8 (>=)
         self.run_length += self.prev_success as i32;
-        self.mem.set_summ_freq(mc, summ_freq + 4);
+        mem.set_summ_freq(mc, summ_freq + 4);
         freq += 4;
-        self.mem.set_freq(s, freq as u8);
+        mem.set_freq(s, freq as u8);
         if freq > MAX_FREQ as u32 {
             self.rescale();
         }
@@ -1340,12 +1352,13 @@ impl<RC> PPMd8<RC> {
     }
 
     fn update2(&mut self) {
+        let mut mem = self.mem.view();
         let s = self.found_state;
         let mc = self.min_context;
-        let freq = self.mem.freq(s) as u32 + 4;
+        let freq = mem.freq(s) as u32 + 4;
         self.run_length = self.init_rl;
-        self.mem.set_summ_freq(mc, self.mem.summ_freq(mc) + 4);
-        self.mem.set_freq(s, freq as u8);
+        mem.set_summ_freq(mc, mem.summ_freq(mc) + 4);
+        mem.set_freq(s, freq as u8);
         if freq > MAX_FREQ as u32 {
             self.rescale();
         }
@@ -1353,28 +1366,24 @@ impl<RC> PPMd8<RC> {
     }
 
     fn update_bin(&mut self, s: StateRef) -> u8 {
-        let freq = self.mem.freq(s);
-        let sym = self.mem.symbol(s);
+        let mut mem = self.mem.view();
+        let freq = mem.freq(s);
+        let sym = mem.symbol(s);
         self.found_state = s;
         self.prev_success = 1;
         self.run_length += 1;
-        self.mem.set_freq(s, freq.wrapping_add((freq < 196) as u8));
+        mem.set_freq(s, freq.wrapping_add((freq < 196) as u8));
         self.next_context();
         sym
     }
 
-    fn mask_symbols(&self, char_mask: &mut [u8; 256], s: StateRef, mut s2: StateRef) {
-        char_mask[self.mem.symbol(s) as usize] = 0;
-        loop {
-            let sym0 = self.mem.symbol(s2);
-            let sym1 = self.mem.symbol(s2.next());
-            s2 = s2.add(2);
-            char_mask[sym0 as usize] = 0;
-            char_mask[sym1 as usize] = 0;
-
-            if s2 >= s {
-                break;
-            }
+    fn mask_symbols(&self, char_mask: &mut [u8; 256], stats: StateRef, num_stats: u32) {
+        for state in self
+            .mem
+            .states(stats, num_stats)
+            .chunks_exact(STATE_SIZE as usize)
+        {
+            char_mask[state[0] as usize] = 0;
         }
     }
 

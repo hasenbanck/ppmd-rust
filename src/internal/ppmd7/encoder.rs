@@ -4,40 +4,42 @@ impl<RC: Ppmd7RangeEncoder> PPMd7<RC> {
     pub(crate) fn encode_symbol(&mut self, symbol: i32) -> Result<(), std::io::Error> {
         let mut char_mask: [u8; 256];
 
-        if self.mem.num_stats(self.min_context) != 1 {
-            let mut s = self.mem.stats(self.min_context);
+        let num_stats = self.mem.num_stats(self.min_context);
+        if num_stats != 1 {
+            let stats = self.mem.stats(self.min_context);
+            let summ_freq = self.mem.summ_freq(self.min_context);
 
-            self.rc.div_range(self.mem.summ_freq(self.min_context));
+            self.rc.div_range(summ_freq);
 
-            if self.mem.symbol(s) as i32 == symbol {
-                self.rc.encode_final(0, self.mem.freq(s) as u32)?;
-                self.found_state = s;
+            let states = self.mem.states(stats, num_stats);
+            if states[0] as i32 == symbol {
+                self.rc.encode_final(0, states[1] as u32)?;
+                self.found_state = stats;
                 self.update1_0();
                 return Ok(());
             }
             self.prev_success = 0;
 
-            let mut sum = self.mem.freq(s) as u32;
+            let mut sum = states[1] as u32;
 
-            for _ in 1..self.mem.num_stats(self.min_context) {
+            let mut s = stats;
+            for state in states[STATE_SIZE as usize..].chunks_exact(STATE_SIZE as usize) {
                 s = s.next();
-                if self.mem.symbol(s) as i32 == symbol {
-                    self.rc.encode_final(sum, self.mem.freq(s) as u32)?;
+                if state[0] as i32 == symbol {
+                    self.rc.encode_final(sum, state[1] as u32)?;
                     self.found_state = s;
                     self.update1();
                     return Ok(());
                 }
-                sum += self.mem.freq(s) as u32;
+                sum += state[1] as u32;
             }
 
-            self.rc
-                .encode(sum, self.mem.summ_freq(self.min_context) - sum);
+            self.rc.encode(sum, summ_freq - sum);
 
             self.hi_bits_flag = Self::hi_bits_flag3(self.mem.symbol(self.found_state) as u32);
             char_mask = [u8::MAX; 256];
 
-            let s2 = self.mem.stats(self.min_context);
-            self.mask_symbols(&mut char_mask, s, s2);
+            self.mask_symbols(&mut char_mask, stats, num_stats);
         } else {
             let s = self.min_context.one_state();
             let s_symbol = self.mem.symbol(s);
@@ -88,44 +90,34 @@ impl<RC: Ppmd7RangeEncoder> PPMd7<RC> {
             self.min_context = mc;
 
             let mut esc_freq = 0;
-            let mut s = self.mem.stats(mc);
+            let stats = self.mem.stats(mc);
             let see_source = self.make_esc_freq(num_masked, &mut esc_freq);
             let mut sum = 0;
 
-            while i != 0 {
-                let cur = self.mem.symbol(s);
-                if cur as i32 == symbol {
+            let mut s = stats;
+            let mut states = self.mem.states(stats, i).chunks_exact(STATE_SIZE as usize);
+            while let Some(state) = states.next() {
+                if state[0] as i32 == symbol {
                     let low = sum;
-                    let freq = self.mem.freq(s) as u32;
+                    let freq = state[1] as u32;
+
+                    // The total adds the escape frequency and the unmasked frequencies of this
+                    // state and of all states after it.
+                    sum += esc_freq + freq;
+                    for state in states {
+                        sum += (state[1] & char_mask[state[0] as usize]) as u32;
+                    }
 
                     let see = self.get_see(see_source);
                     see.update();
                     self.found_state = s;
-                    sum += esc_freq;
-
-                    let mut num2 = i / 2;
-                    i &= 1;
-                    sum += freq & 0u32.wrapping_sub(i);
-                    if num2 != 0 {
-                        s = s.add(i);
-
-                        while num2 != 0 {
-                            let sym0 = self.mem.symbol(s);
-                            let sym1 = self.mem.symbol(s.next());
-                            sum += (self.mem.freq(s) & char_mask[sym0 as usize]) as u32;
-                            sum += (self.mem.freq(s.next()) & char_mask[sym1 as usize]) as u32;
-                            s = s.add(2);
-                            num2 -= 1;
-                        }
-                    }
                     self.rc.div_range(sum);
                     self.rc.encode_final(low, freq)?;
                     self.update2();
                     return Ok(());
                 }
-                sum += self.mem.freq(s) as u32 & char_mask[cur as usize] as u32;
+                sum += (state[1] & char_mask[state[0] as usize]) as u32;
                 s = s.next();
-                i -= 1;
             }
 
             {
@@ -137,9 +129,7 @@ impl<RC: Ppmd7RangeEncoder> PPMd7<RC> {
                 self.rc.encode(sum, esc_freq);
             }
 
-            let s2 = self.mem.stats(self.min_context);
-            s = s.prev();
-            self.mask_symbols(&mut char_mask, s, s2);
+            self.mask_symbols(&mut char_mask, stats, i);
         }
     }
 }

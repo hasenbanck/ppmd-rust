@@ -4,7 +4,7 @@ pub(crate) mod ppmd8;
 
 mod memory;
 
-use memory::{CtxRef, Memory, StateRef, Successor, UnitRef, UNIT_SIZE};
+use memory::{CtxRef, Memory, StateRef, Successor, UnitRef, STATE_SIZE, UNIT_SIZE};
 
 const PPMD_INT_BITS: u32 = 7;
 const PPMD_PERIOD_BITS: u32 = 7;

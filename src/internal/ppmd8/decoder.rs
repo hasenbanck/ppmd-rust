@@ -5,8 +5,9 @@ impl<R: Read> PPMd8<RangeDecoder<R>> {
     pub(crate) fn decode_symbol(&mut self) -> Result<i32, std::io::Error> {
         let mut char_mask: [u8; 256];
 
-        if self.mem.num_stats(self.min_context) != 0 {
-            let mut s = self.mem.stats(self.min_context);
+        let num_stats = self.mem.num_stats(self.min_context);
+        if num_stats != 0 {
+            let stats = self.mem.stats(self.min_context);
             let mut summ_freq = self.mem.summ_freq(self.min_context);
 
             summ_freq = self.rc.correct_sum_range(summ_freq);
@@ -14,36 +15,34 @@ impl<R: Read> PPMd8<RangeDecoder<R>> {
             let mut count = self.rc.get_threshold(summ_freq);
             let mut hi_cnt = count;
 
-            let freq = self.mem.freq(s) as u32;
+            let states = self.mem.states(stats, num_stats + 1);
+            let freq = states[1] as u32;
             count = count.wrapping_sub(freq);
             if (count as i32) < 0 {
                 self.rc.decode_final(0, freq)?;
-                self.found_state = s;
-                let sym = self.mem.symbol(s);
+                self.found_state = stats;
+                let sym = states[0];
                 self.update1_0();
                 return Ok(sym as i32);
             }
 
             self.prev_success = 0;
-            let mut i = self.mem.num_stats(self.min_context);
 
-            loop {
+            let mut s = stats;
+            let mut rest = &states[STATE_SIZE as usize..];
+            while let [sym, freq, _, _, _, _, tail @ ..] = rest {
                 s = s.next();
-                let freq = self.mem.freq(s) as u32;
+                let freq = *freq as u32;
                 count = count.wrapping_sub(freq);
                 if (count as i32) < 0 {
                     self.rc
                         .decode_final(hi_cnt.wrapping_sub(count).wrapping_sub(freq), freq)?;
                     self.found_state = s;
-                    let sym = self.mem.symbol(s);
+                    let sym = *sym;
                     self.update1();
                     return Ok(sym as i32);
                 }
-
-                i -= 1;
-                if i == 0 {
-                    break;
-                }
+                rest = tail;
             }
 
             if hi_cnt >= summ_freq {
@@ -55,8 +54,7 @@ impl<R: Read> PPMd8<RangeDecoder<R>> {
 
             char_mask = [u8::MAX; 256];
 
-            let s2 = self.mem.stats(self.min_context);
-            self.mask_symbols(&mut char_mask, s, s2);
+            self.mask_symbols(&mut char_mask, stats, num_stats + 1);
         } else {
             let s = self.min_context.one_state();
             let range = self.rc.range;
@@ -103,28 +101,17 @@ impl<R: Read> PPMd8<RangeDecoder<R>> {
                 }
             }
 
-            let mut s = self.mem.stats(mc);
-            let mut num = self.mem.num_stats(mc) + 1;
-            let mut num2 = num / 2;
-
-            num &= 1;
-            let mut hi_cnt = self.mem.freq(s) as u32
-                & char_mask[self.mem.symbol(s) as usize] as u32
-                & 0u32.wrapping_sub(num);
-            s = s.add(num);
+            let stats = self.mem.stats(mc);
+            let num_stats = self.mem.num_stats(mc) + 1;
             self.min_context = mc;
 
-            loop {
-                let sym0 = self.mem.symbol(s);
-                let sym1 = self.mem.symbol(s.next());
-                hi_cnt += (self.mem.freq(s) & char_mask[sym0 as usize]) as u32;
-                hi_cnt += (self.mem.freq(s.next()) & char_mask[sym1 as usize]) as u32;
-                s = s.add(2);
-
-                num2 -= 1;
-                if num2 == 0 {
-                    break;
-                }
+            let mut hi_cnt = 0;
+            for state in self
+                .mem
+                .states(stats, num_stats)
+                .chunks_exact(STATE_SIZE as usize)
+            {
+                hi_cnt += (state[1] & char_mask[state[0] as usize]) as u32;
             }
 
             let see_source = self.make_esc_freq(num_masked, &mut freq_sum);
@@ -134,21 +121,20 @@ impl<R: Read> PPMd8<RangeDecoder<R>> {
             let mut count = self.rc.get_threshold(freq_sum2);
 
             if count < hi_cnt {
-                s = self.mem.stats(self.min_context);
                 hi_cnt = count;
-
-                loop {
-                    count = count.wrapping_sub(
-                        self.mem.freq(s) as u32 & char_mask[self.mem.symbol(s) as usize] as u32,
-                    );
-                    s = s.next();
-
+                let mut s = stats;
+                let mut freq = 0;
+                let mut rest = self.mem.states(stats, num_stats);
+                while let [sym, f, _, _, _, _, tail @ ..] = rest {
+                    freq = (f & char_mask[*sym as usize]) as u32;
+                    count = count.wrapping_sub(freq);
                     if (count as i32) < 0 {
                         break;
                     }
+                    s = s.next();
+                    rest = tail;
                 }
-                s = s.prev();
-                let freq = self.mem.freq(s) as u32;
+
                 self.rc
                     .decode_final(hi_cnt.wrapping_sub(count).wrapping_sub(freq), freq)?;
 
@@ -171,16 +157,7 @@ impl<R: Read> PPMd8<RangeDecoder<R>> {
             let see = self.get_see(see_source);
             see.summ = (see.summ as u32).wrapping_add(freq_sum) as u16;
 
-            s = self.mem.stats(self.min_context);
-            let s2 = s.add(self.mem.num_stats(self.min_context) + 1);
-            loop {
-                char_mask[self.mem.symbol(s) as usize] = 0;
-                s = s.next();
-
-                if s >= s2 {
-                    break;
-                }
-            }
+            self.mask_symbols(&mut char_mask, stats, num_stats);
         }
     }
 }

@@ -188,8 +188,8 @@ impl From<CtxRef> for Successor {
 /// | 2      | `successor: u32`  |
 ///
 /// A context record fills one unit. Its layout depends on the model variant.
-pub(crate) struct Memory {
-    bytes: Vec<u8>,
+pub(crate) struct Memory<B = Vec<u8>> {
+    bytes: B,
 }
 
 impl Memory {
@@ -202,38 +202,78 @@ impl Memory {
         Ok(Self { bytes })
     }
 
+    /// Returns a view of the memory that borrows the bytes as a slice. The compiler keeps the
+    /// address and the length of the slice in registers across writes into the memory.
     #[inline(always)]
-    pub(crate) fn u8(&self, offset: u32) -> u8 {
-        self.bytes[offset as usize]
+    pub(crate) fn view(&mut self) -> Memory<&mut [u8]> {
+        Memory {
+            bytes: &mut self.bytes,
+        }
+    }
+}
+
+impl<B: AsRef<[u8]> + AsMut<[u8]>> Memory<B> {
+    #[inline(always)]
+    fn u8(&self, offset: u32) -> u8 {
+        self.bytes.as_ref()[offset as usize]
     }
 
     #[inline(always)]
-    pub(crate) fn set_u8(&mut self, offset: u32, value: u8) {
-        self.bytes[offset as usize] = value;
+    fn set_u8(&mut self, offset: u32, value: u8) {
+        self.bytes.as_mut()[offset as usize] = value;
     }
 
+    /// Returns the record of `N` bytes at `offset`. All field accesses of a record check the
+    /// same bounds, so the compiler can merge the checks of several fields into one.
     #[inline(always)]
-    pub(crate) fn u16(&self, offset: u32) -> u16 {
+    fn record<const N: usize>(&self, offset: u32) -> &[u8; N] {
         let offset = offset as usize;
-        u16::from_le_bytes(self.bytes[offset..offset + 2].try_into().unwrap())
+        self.bytes.as_ref()[offset..offset + N].try_into().unwrap()
     }
 
     #[inline(always)]
-    pub(crate) fn set_u16(&mut self, offset: u32, value: u16) {
+    fn record_mut<const N: usize>(&mut self, offset: u32) -> &mut [u8; N] {
         let offset = offset as usize;
-        self.bytes[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+        (&mut self.bytes.as_mut()[offset..offset + N])
+            .try_into()
+            .unwrap()
+    }
+
+    /// Returns the byte at offset `field` of the unit record at `unit`.
+    #[inline(always)]
+    pub(crate) fn unit_u8(&self, unit: u32, field: usize) -> u8 {
+        self.record::<{ UNIT_SIZE as usize }>(unit)[field]
     }
 
     #[inline(always)]
-    pub(crate) fn u32(&self, offset: u32) -> u32 {
-        let offset = offset as usize;
-        u32::from_le_bytes(self.bytes[offset..offset + 4].try_into().unwrap())
+    pub(crate) fn set_unit_u8(&mut self, unit: u32, field: usize, value: u8) {
+        self.record_mut::<{ UNIT_SIZE as usize }>(unit)[field] = value;
+    }
+
+    /// Returns the `u16` at offset `field` of the unit record at `unit`.
+    #[inline(always)]
+    pub(crate) fn unit_u16(&self, unit: u32, field: usize) -> u16 {
+        let record = self.record::<{ UNIT_SIZE as usize }>(unit);
+        u16::from_le_bytes(record[field..field + 2].try_into().unwrap())
     }
 
     #[inline(always)]
-    pub(crate) fn set_u32(&mut self, offset: u32, value: u32) {
-        let offset = offset as usize;
-        self.bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+    pub(crate) fn set_unit_u16(&mut self, unit: u32, field: usize, value: u16) {
+        let record = self.record_mut::<{ UNIT_SIZE as usize }>(unit);
+        record[field..field + 2].copy_from_slice(&value.to_le_bytes());
+    }
+
+    /// Returns the `u32` at offset `field` of the unit record at `unit`.
+    #[inline(always)]
+    pub(crate) fn unit_u32(&self, unit: u32, field: usize) -> u32 {
+        let record = self.record::<{ UNIT_SIZE as usize }>(unit);
+        u32::from_le_bytes(record[field..field + 4].try_into().unwrap())
+    }
+
+    #[inline(always)]
+    pub(crate) fn set_unit_u32(&mut self, unit: u32, field: usize, value: u32) {
+        let record = self.record_mut::<{ UNIT_SIZE as usize }>(unit);
+        record[field..field + 4].copy_from_slice(&value.to_le_bytes());
     }
 
     /// Copies `len` bytes from `src` to `dst`. The ranges may overlap.
@@ -241,6 +281,7 @@ impl Memory {
     fn copy(&mut self, src: u32, dst: u32, len: u32) {
         let src = src as usize;
         self.bytes
+            .as_mut()
             .copy_within(src..src + len as usize, dst as usize);
     }
 
@@ -264,52 +305,59 @@ impl Memory {
 
     #[inline(always)]
     pub(crate) fn symbol(&self, state: StateRef) -> u8 {
-        self.u8(state.0)
+        self.state(state)[0]
     }
 
     #[inline(always)]
     pub(crate) fn set_symbol(&mut self, state: StateRef, value: u8) {
-        self.set_u8(state.0, value);
+        self.record_mut::<{ STATE_SIZE as usize }>(state.0)[0] = value;
     }
 
     #[inline(always)]
     pub(crate) fn freq(&self, state: StateRef) -> u8 {
-        self.u8(state.0 + 1)
+        self.state(state)[1]
     }
 
     #[inline(always)]
     pub(crate) fn set_freq(&mut self, state: StateRef, value: u8) {
-        self.set_u8(state.0 + 1, value);
+        self.record_mut::<{ STATE_SIZE as usize }>(state.0)[1] = value;
     }
 
     #[inline(always)]
     pub(crate) fn successor(&self, state: StateRef) -> Successor {
-        Successor(self.u32(state.0 + 2))
+        let state = self.state(state);
+        Successor(u32::from_le_bytes([state[2], state[3], state[4], state[5]]))
     }
 
     #[inline(always)]
     pub(crate) fn set_successor(&mut self, state: StateRef, value: Successor) {
-        self.set_u32(state.0 + 2, value.0);
+        self.record_mut::<{ STATE_SIZE as usize }>(state.0)[2..]
+            .copy_from_slice(&value.0.to_le_bytes());
     }
 
     #[inline(always)]
     pub(crate) fn state(&self, state: StateRef) -> [u8; STATE_SIZE as usize] {
-        let state = state.0 as usize;
-        self.bytes[state..state + STATE_SIZE as usize]
-            .try_into()
-            .unwrap()
+        *self.record(state.0)
     }
 
     #[inline(always)]
     pub(crate) fn set_state(&mut self, state: StateRef, value: [u8; STATE_SIZE as usize]) {
-        let state = state.0 as usize;
-        self.bytes[state..state + STATE_SIZE as usize].copy_from_slice(&value);
+        *self.record_mut(state.0) = value;
+    }
+
+    /// Returns the records of `n` consecutive states that start at `stats`. One bounds check
+    /// covers all of them.
+    #[inline(always)]
+    pub(crate) fn states(&self, stats: StateRef, n: u32) -> &[u8] {
+        let start = stats.0 as usize;
+        &self.bytes.as_ref()[start..start + n as usize * STATE_SIZE as usize]
     }
 
     /// Copies the state record at `src` to `dst`.
     #[inline(always)]
     pub(crate) fn copy_state(&mut self, src: StateRef, dst: StateRef) {
-        self.copy(src.0, dst.0, STATE_SIZE);
+        let state = self.state(src);
+        self.set_state(dst, state);
     }
 
     #[inline(always)]
