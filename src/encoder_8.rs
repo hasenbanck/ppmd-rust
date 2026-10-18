@@ -11,9 +11,6 @@ pub struct Ppmd8Encoder<W: Write> {
     ppmd: PPMd8<RangeEncoder<W>>,
 }
 
-unsafe impl<W: Write> Send for Ppmd8Encoder<W> {}
-unsafe impl<W: Write> Sync for Ppmd8Encoder<W> {}
-
 impl<W: Write> Ppmd8Encoder<W> {
     /// Creates a new [`Ppmd8Encoder`] which provides a writer over the compressed data.
     ///
@@ -59,7 +56,7 @@ impl<W: Write> Ppmd8Encoder<W> {
     /// Adds an end marker to the data if `with_end_marker` is set to `true`.
     pub fn finish(mut self, with_end_marker: bool) -> std::io::Result<W> {
         if with_end_marker {
-            unsafe { self.ppmd.encode_symbol(SYM_END)? };
+            self.ppmd.encode_symbol(SYM_END)?;
         }
         self.flush()?;
         Ok(self.into_inner())
@@ -73,7 +70,7 @@ impl<W: Write> Write for Ppmd8Encoder<W> {
         }
 
         for &byte in buf.iter() {
-            unsafe { self.ppmd.encode_symbol(byte as i32)? };
+            self.ppmd.encode_symbol(byte as i32)?;
         }
 
         Ok(buf.len())

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.5.2 - 2026-10-18
+
+### Changed
+
+- The implementation is now 100% safe Rust and the crate forbids `unsafe` code.
+- No behavioural changes. The crate stays 100% compatible.
+- Deprecated the `unstable-tagged-offsets` feature. The bounds checks of the safe implementation replace it.
+  It's inert and will be removed in version 2 of the crate.
+
 ## 1.5.1 - 2026-10-18
 
 ### Fixed

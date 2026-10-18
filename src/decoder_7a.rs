@@ -11,9 +11,6 @@ pub struct Ppmd7aDecoder<R: Read> {
     finished: bool,
 }
 
-unsafe impl<R: Read> Send for Ppmd7aDecoder<R> {}
-unsafe impl<R: Read> Sync for Ppmd7aDecoder<R> {}
-
 impl<R: Read> Ppmd7aDecoder<R> {
     /// Creates a new [`Ppmd7aDecoder`] which provides a reader over the uncompressed data.
     ///
